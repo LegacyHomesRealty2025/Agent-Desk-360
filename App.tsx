@@ -34,6 +34,15 @@ const DEFAULT_TAGS = [
 
 const TZ = 'America/Los_Angeles';
 
+// LocalStorage Keys
+const STORAGE_KEYS = {
+  LEADS: 'af_crm_leads',
+  TASKS: 'af_crm_tasks',
+  DEALS: 'af_crm_deals',
+  OPEN_HOUSES: 'af_crm_open_houses',
+  USERS: 'af_crm_users'
+};
+
 export interface NavItemConfig {
   id: string;
   label: string;
@@ -94,21 +103,57 @@ const App: React.FC = () => {
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   
-  // Roster Management
-  const [users, setUsers] = useState<User[]>([MOCK_BROKER, ...MOCK_AGENTS]);
-  const [currentUser, setCurrentUser] = useState<User | null>(MOCK_BROKER);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  // Data State with Persistence (Simulated Backend)
+  const [users, setUsers] = useState<User[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
+    return saved ? JSON.parse(saved) : [MOCK_BROKER, ...MOCK_AGENTS];
+  });
   
+  const [leads, setLeads] = useState<Lead[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.LEADS);
+    return saved ? JSON.parse(saved) : MOCK_LEADS;
+  });
+
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.TASKS);
+    return saved ? JSON.parse(saved) : MOCK_TASKS;
+  });
+
+  const [deals, setDeals] = useState<Deal[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DEALS);
+    return saved ? JSON.parse(saved) : MOCK_DEALS;
+  });
+
+  const [openHouses, setOpenHouses] = useState<OpenHouse[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.OPEN_HOUSES);
+    return saved ? JSON.parse(saved) : MOCK_OPEN_HOUSES;
+  });
+
+  // Persist State to LocalStorage
+  useEffect(() => localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users)), [users]);
+  useEffect(() => localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads)), [leads]);
+  useEffect(() => localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks)), [tasks]);
+  useEffect(() => localStorage.setItem(STORAGE_KEYS.DEALS, JSON.stringify(deals)), [deals]);
+  useEffect(() => localStorage.setItem(STORAGE_KEYS.OPEN_HOUSES, JSON.stringify(openHouses)), [openHouses]);
+
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Default to the first broker found in users
+    return users.find(u => u.role === UserRole.BROKER) || users[0];
+  });
+
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [brokerage, setBrokerage] = useState<Brokerage | null>(MOCK_BROKERAGE);
-  const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
-  const [deals, setDeals] = useState<Deal[]>(MOCK_DEALS);
-  const [openHouses, setOpenHouses] = useState<OpenHouse[]>(MOCK_OPEN_HOUSES);
   const [view, setView] = useState<string>('dashboard');
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [activePublicOpenHouse, setActivePublicOpenHouse] = useState<OpenHouse | null>(null);
 
   const [navItems, setNavItems] = useState<NavItemConfig[]>(INITIAL_NAV_ITEMS);
+
+  // Derived selected lead to ensure UI reflects the latest master state
+  const selectedLead = useMemo(() => 
+    leads.find(l => l.id === selectedLeadId) || null, 
+    [leads, selectedLeadId]
+  );
 
   // Notification Calculation
   const notifications = useMemo(() => {
@@ -128,7 +173,6 @@ const App: React.FC = () => {
 
     const notificationItems: NotificationItem[] = [];
 
-    // Notifications for tasks: incomplete and due today or overdue
     const pendingTasks = myTasks.filter(t => !t.isCompleted && t.dueDate.split('T')[0] <= todayStr);
     pendingTasks.forEach(t => {
       notificationItems.push({
@@ -140,7 +184,6 @@ const App: React.FC = () => {
       });
     });
     
-    // Notifications for events: lead milestones today
     const activeMilestoneLeads = myLeads.filter(l => !l.isDeleted && (isTodayMD(l.dob) || isTodayMD(l.weddingAnniversary) || isTodayMD(l.homeAnniversary)));
     activeMilestoneLeads.forEach(l => {
       let milestoneType = '';
@@ -165,7 +208,6 @@ const App: React.FC = () => {
     };
   }, [tasks, leads, currentUser]);
 
-  // Check for invite token in URL
   const inviteId = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('invite');
@@ -175,34 +217,7 @@ const App: React.FC = () => {
     return invitations.find(i => i.id === inviteId);
   }, [invitations, inviteId]);
 
-  // Simulation: Periodically "ingest" a lead from Zillow
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isAuthenticated && currentUser && brokerage) {
-        const mockZillowPayload = {
-          contact_info: {
-            first_name: "API_Ingested",
-            last_name: "ZillowLead",
-            email: "api.zillow@example.com",
-            phone: "(555) 999-0000"
-          },
-          property_info: {
-            address: "999 Zillow Way, Scranton, PA",
-            price: "$850,000"
-          },
-          inquiry_id: `z_${Date.now()}`
-        };
-
-        const newLead = leadIngestionService.transformZillow(mockZillowPayload, brokerage.id, currentUser.id);
-        setLeads(prev => {
-          if (prev.some(l => l.email === newLead.email)) return prev;
-          return [newLead, ...prev];
-        });
-      }
-    }, 15000); 
-    return () => clearTimeout(timer);
-  }, [currentUser, brokerage, isAuthenticated]);
-
+  // Lead Auto-Sync Logic
   useEffect(() => {
     const laNow = new Date(new Date().toLocaleString('en-US', { timeZone: TZ }));
     laNow.setHours(0, 0, 0, 0);
@@ -259,7 +274,7 @@ const App: React.FC = () => {
   const handleSwitchUser = (userId: string) => {
     const nextUser = users.find(u => u.id === userId);
     if (nextUser) {
-      setSelectedLead(null);
+      setSelectedLeadId(null);
       setCurrentUser(nextUser);
       setView('dashboard');
     }
@@ -320,12 +335,12 @@ const App: React.FC = () => {
     switch (view) {
       case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
       case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
-      case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLead(l); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;
-      case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLead(l); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;
+      case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;
+      case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;
       case 'marketing': return <MarketingView currentUser={currentUser} brokerage={brokerage} leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} />;
       case 'pipeline': return <PipelineView deals={accessibleDeals} leads={accessibleLeads} onAddDeal={d => setDeals(prev => [...prev, d])} onUpdateDeal={(id, u) => setDeals(prev => prev.map(d => d.id === id ? {...d, ...u} : d))} onDeleteDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: true, deletedAt: new Date().toISOString()} : d))} availableSources={DEFAULT_SOURCES} />;
       case 'reports': return <ReportsView leads={leads} deals={deals} agents={activeUsers} currentUser={currentUser} />;
-      case 'calendar': return <CalendarView leads={accessibleLeads} tasks={accessibleTasks} onSelectLead={l => { setSelectedLead(l); setView('lead-detail'); }} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(t => t.id === id ? {...t, ...u} : t))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} user={currentUser} />;
+      case 'calendar': return <CalendarView leads={accessibleLeads} tasks={accessibleTasks} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(t => t.id === id ? {...t, ...u} : t))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} user={currentUser} />;
       case 'lead-detail': return selectedLead ? <LeadDetail lead={selectedLead} user={currentUser} onBack={() => setView('contacts')} onAddNote={(id, c) => { const note: LeadNote = { id: `n_${Date.now()}`, content: c, createdAt: new Date().toISOString(), authorId: currentUser.id, authorName: `${currentUser.firstName} ${currentUser.lastName}` }; setLeads(prev => prev.map(l => l.id === id ? {...l, notes: [note, ...l.notes]} : l)); }} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} /> : <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
       case 'tasks': return <TaskList tasks={accessibleTasks} leads={accessibleLeads} user={currentUser} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(t => t.id === id ? {...t, ...u} : t))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} />;
       case 'trash': return <TrashView leads={leads.filter(l => l.isDeleted)} deals={deals.filter(d => d.isDeleted)} openHouses={openHouses.filter(oh => oh.isDeleted)} users={trashedUsers} trashedSources={[]} trashedTags={[]} onRestoreLead={id => setLeads(prev => prev.map(l => l.id === id ? {...l, isDeleted: false} : l))} onRestoreDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: false} : d))} onRestoreOpenHouse={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: false } : oh))} onRestoreUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: false} : u))} onRestoreSource={() => {}} onRestoreTag={() => {}} onBulkRestoreLeads={ids => setLeads(prev => prev.map(l => ids.includes(l.id) ? {...l, isDeleted: false} : l))} onBulkRestoreDeals={ids => setDeals(prev => prev.map(d => ids.includes(d.id) ? {...d, isDeleted: false} : d))} onBulkRestoreOpenHouses={ids => setOpenHouses(prev => prev.map(oh => ids.includes(oh.id) ? { ...oh, isDeleted: false } : oh))} onPermanentDeleteLead={id => setLeads(prev => prev.filter(l => l.id !== id))} onPermanentDeleteDeal={id => setDeals(prev => prev.filter(d => d.id !== id))} onPermanentDeleteOpenHouse={id => setOpenHouses(prev => prev.filter(oh => oh.id !== id))} onPermanentDeleteUser={id => setUsers(prev => prev.filter(u => u.id !== id))} onPermanentDeleteSource={() => {}} onPermanentDeleteTag={() => {}} onBulkPermanentDeleteLeads={ids => setLeads(prev => prev.filter(l => !ids.includes(l.id)))} onBulkPermanentDeleteDeals={ids => setDeals(prev => prev.filter(d => !ids.includes(d.id)))} onBulkPermanentDeleteOpenHouses={ids => setOpenHouses(prev => prev.filter(oh => !ids.includes(oh.id)))} />;
