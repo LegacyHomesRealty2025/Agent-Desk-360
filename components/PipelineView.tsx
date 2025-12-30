@@ -284,7 +284,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   };
 
   const handleDragStart = (e: React.DragEvent, dealId: string) => {
-    if (displayMode === 'list') return;
+    if (displayMode === 'list' || statusFilter !== 'ALL') return;
     setDraggedDealId(dealId);
     e.dataTransfer.setData('dealId', dealId);
     e.dataTransfer.effectAllowed = 'move';
@@ -478,10 +478,10 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     return (
       <div 
         key={deal.id} 
-        draggable={displayMode === 'tile'}
+        draggable={displayMode === 'tile' && statusFilter === 'ALL'}
         onDragStart={(e) => handleDragStart(e, deal.id)}
         onDragEnd={handleDragEnd}
-        className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group cursor-grab active:cursor-grabbing relative"
+        className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group relative ${statusFilter === 'ALL' ? 'cursor-grab active:cursor-grabbing' : ''}`}
       >
         <div className="absolute top-4 right-4 flex space-x-1 z-10">
           <button 
@@ -508,7 +508,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                <Highlight text={deal.leadName} query={searchTerm} />
              </p>
           </div>
-          <i className="fas fa-grip-vertical text-slate-200 group-hover:text-slate-400 transition-colors"></i>
+          {statusFilter === 'ALL' && <i className="fas fa-grip-vertical text-slate-200 group-hover:text-slate-400 transition-colors"></i>}
         </div>
         <p className="text-[12px] text-slate-500 mb-3 flex items-center">
           <i className="fas fa-location-dot mr-1 text-slate-300"></i>
@@ -567,9 +567,26 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col space-y-4">
-          <div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Pipeline</h2>
-            <p className="text-[12px] text-slate-500 font-normal">Manage and track your entire transaction portfolio.</p>
+          <div className="flex items-center space-x-3">
+            {statusFilter !== 'ALL' && (
+              <button 
+                onClick={() => setStatusFilter('ALL')}
+                className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-95"
+                title="Back to Board"
+              >
+                <i className="fas fa-arrow-left"></i>
+              </button>
+            )}
+            <div>
+              <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+                {statusFilter === 'ALL' ? 'Pipeline' : getStatusLabel(statusFilter)}
+              </h2>
+              <p className="text-[12px] text-slate-500 font-normal">
+                {statusFilter === 'ALL' 
+                  ? 'Manage and track your entire transaction portfolio.' 
+                  : `Viewing all ${getStatusLabel(statusFilter).toLowerCase()} transactions.`}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner w-fit">
@@ -620,49 +637,118 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
       </div>
 
       {/* Grid or List View Render */}
-      {displayMode === 'tile' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[600px]">
-          {(['ACTIVE', 'PENDING', 'CLOSED'] as Deal['status'][]).map(status => {
-            const statusDeals = getFilteredStatusDeals(status);
-            const groupedDeals = groupDealsByMonth(statusDeals);
-            const sortedMonths = Object.keys(groupedDeals).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-            const totalStatusVolume = statusDeals.reduce((sum, d) => sum + d.salePrice, 0);
-            return (
-              <div key={status} onDragOver={(e) => handleDragOver(e, status)} onDrop={(e) => handleDrop(e, status)} className={`flex flex-col bg-slate-50/50 rounded-[2rem] border-2 transition-all min-h-[500px] ${hoveredColumn === status ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-100'}`}>
-                <div className={`p-6 rounded-t-[1.8rem] flex items-center justify-between text-white shadow-lg mb-6 ${getStatusSummaryStyles(status)}`}>
-                  <div className="flex items-center space-x-5">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-base ${getStatusIconStyles(status)}`}><i className={`fas ${status === 'ACTIVE' ? 'fa-bolt' : status === 'PENDING' ? 'fa-clock' : 'fa-check-double'}`}></i></div>
-                    <div><h3 className="text-3xl font-black uppercase tracking-tighter">{status === 'CLOSED' ? 'Sold' : status}</h3><p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">{statusDeals.length} Transaction{statusDeals.length !== 1 ? 's' : ''}</p></div>
-                  </div>
-                  <div className="text-right"><p className="text-[9px] font-black uppercase opacity-70 tracking-widest mb-0.5">Volume</p><p className="text-base font-black tracking-tight">${totalStatusVolume.toLocaleString()}</p></div>
-                </div>
-                <div className="flex-1 px-4 pb-6 space-y-8 overflow-y-auto scrollbar-hide max-h-[700px]">
-                  {sortedMonths.length > 0 ? sortedMonths.map(month => (
-                    <div key={month} className="space-y-4">
-                      <div className="flex items-center space-x-3 px-2"><div className="h-px flex-1 bg-slate-200"></div><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/80 px-2 py-0.5 rounded-full">{month}</span><div className="h-px flex-1 bg-slate-200"></div></div>
-                      <div className="space-y-4">{groupedDeals[month].map(deal => renderDealCard(deal))}</div>
+      {statusFilter === 'ALL' ? (
+        displayMode === 'tile' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[600px]">
+            {(['ACTIVE', 'PENDING', 'CLOSED'] as Deal['status'][]).map(status => {
+              const statusDeals = getFilteredStatusDeals(status);
+              const groupedDeals = groupDealsByMonth(statusDeals);
+              const sortedMonths = Object.keys(groupedDeals).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+              const totalStatusVolume = statusDeals.reduce((sum, d) => sum + d.salePrice, 0);
+              return (
+                <div key={status} onDragOver={(e) => handleDragOver(e, status)} onDrop={(e) => handleDrop(e, status)} className={`flex flex-col bg-slate-50/50 rounded-[2rem] border-2 transition-all min-h-[500px] ${hoveredColumn === status ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-100'}`}>
+                  <button 
+                    onClick={() => setStatusFilter(status)}
+                    className={`p-6 rounded-t-[1.8rem] flex items-center justify-between text-white shadow-lg mb-6 group/header transition-all hover:scale-[1.02] active:scale-[0.98] ${getStatusSummaryStyles(status)}`}
+                  >
+                    <div className="flex items-center space-x-5">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-base ${getStatusIconStyles(status)}`}><i className={`fas ${status === 'ACTIVE' ? 'fa-bolt' : status === 'PENDING' ? 'fa-clock' : 'fa-check-double'}`}></i></div>
+                      <div className="text-left"><h3 className="text-3xl font-black uppercase tracking-tighter flex items-center"><span>{status === 'CLOSED' ? 'Sold' : status}</span><i className="fas fa-arrow-right ml-3 text-sm opacity-0 group-hover/header:opacity-100 transition-opacity"></i></h3><p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">{statusDeals.length} Transaction{statusDeals.length !== 1 ? 's' : ''}</p></div>
                     </div>
-                  )) : <div className="flex flex-col items-center justify-center py-20 text-slate-300 opacity-40"><i className="fas fa-folder-open text-4xl mb-4"></i><p className="text-[10px] font-black uppercase tracking-widest">{searchTerm || startDate || endDate ? 'No search matches' : `No ${status.toLowerCase()} deals`}</p></div>}
+                    <div className="text-right"><p className="text-[9px] font-black uppercase opacity-70 tracking-widest mb-0.5">Volume</p><p className="text-base font-black tracking-tight">${totalStatusVolume.toLocaleString()}</p></div>
+                  </button>
+                  <div className="flex-1 px-4 pb-6 space-y-8 overflow-y-auto scrollbar-hide max-h-[700px]">
+                    {sortedMonths.length > 0 ? sortedMonths.map(month => (
+                      <div key={month} className="space-y-4">
+                        <div className="flex items-center space-x-3 px-2"><div className="h-px flex-1 bg-slate-200"></div><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/80 px-2 py-0.5 rounded-full">{month}</span><div className="h-px flex-1 bg-slate-200"></div></div>
+                        <div className="space-y-4">{groupedDeals[month].map(deal => renderDealCard(deal))}</div>
+                      </div>
+                    )) : <div className="flex flex-col items-center justify-center py-20 text-slate-300 opacity-40"><i className="fas fa-folder-open text-4xl mb-4"></i><p className="text-[10px] font-black uppercase tracking-widest">{searchTerm || startDate || endDate ? 'No search matches' : `No ${status.toLowerCase()} deals`}</p></div>}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><i className="fas fa-chart-line"></i></div>
-                <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtered Total Volume</p><p className="text-xl font-black text-slate-800">${totalFilteredVolume.toLocaleString()}</p></div>
-             </div>
-             <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
-                <div className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200"><i className="fas fa-money-bill-trend-up"></i></div>
-                <div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Filtered Total GCI</p><p className="text-xl font-black text-slate-800">${totalFilteredGCI.toLocaleString()}</p></div>
-             </div>
+              );
+            })}
           </div>
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden"><table className="w-full text-left"><thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('name')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Name {renderSortIcon('name')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('status')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Status {renderSortIcon('status')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('date')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Date {renderSortIcon('date')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('price')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Price {renderSortIcon('price')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('side')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Side {renderSortIcon('side')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('source')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Source {renderSortIcon('source')}</div></th><th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{paginatedDeals.map(deal => (
-            <tr key={deal.id} className="hover:bg-slate-50 transition-all group"><td className="px-8 py-6"><p className="text-sm font-black text-slate-800"><Highlight text={deal.leadName} query={searchTerm} /></p><p className="text-[11px] text-slate-400 font-medium truncate max-w-xs"><Highlight text={deal.address} query={searchTerm} /></p></td><td className="px-8 py-6"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${deal.status === 'ACTIVE' ? 'bg-blue-50 text-blue-600 border-blue-100' : deal.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{deal.status}</span></td><td className="px-8 py-6 text-sm font-bold text-slate-600">{new Date(deal.date).toLocaleDateString('en-US', { timeZone: TZ })}</td><td className="px-8 py-6"><p className="text-sm font-black text-slate-800">${deal.salePrice.toLocaleString()}</p><p className="text-[10px] text-emerald-600 font-bold uppercase">GCI: ${deal.commissionAmount.toLocaleString()}</p></td><td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-1 rounded">{deal.side}</span></td><td className="px-8 py-6"><div className="flex items-center space-x-2"><i className={`${getSourceIcon(deal.source || '').icon} ${getSourceIcon(deal.source || '').color} text-[11px]`}></i><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{deal.source}</span></div></td><td className="px-8 py-6 text-right"><div className="flex items-center justify-end space-x-2 transition-opacity"><button onClick={() => handleOpenEdit(deal)} className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button><button onClick={() => setDealToDelete(deal)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-xs"></i></button></div></td></tr>
-          ))}</tbody></table></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><i className="fas fa-chart-line"></i></div>
+                  <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtered Total Volume</p><p className="text-xl font-black text-slate-800">${totalFilteredVolume.toLocaleString()}</p></div>
+               </div>
+               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200"><i className="fas fa-money-bill-trend-up"></i></div>
+                  <div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Filtered Total GCI</p><p className="text-xl font-black text-slate-800">${totalFilteredGCI.toLocaleString()}</p></div>
+               </div>
+            </div>
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden"><table className="w-full text-left"><thead><tr className="bg-slate-50 border-b border-slate-200"><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('name')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Name {renderSortIcon('name')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('status')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Status {renderSortIcon('status')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('date')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Date {renderSortIcon('date')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('price')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Price {renderSortIcon('price')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('side')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Side {renderSortIcon('side')}</div></th><th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('source')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Source {renderSortIcon('source')}</div></th><th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{paginatedDeals.map(deal => (
+              <tr key={deal.id} className="hover:bg-slate-50 transition-all group"><td className="px-8 py-6"><p className="text-sm font-black text-slate-800"><Highlight text={deal.leadName} query={searchTerm} /></p><p className="text-[11px] text-slate-400 font-medium truncate max-w-xs"><Highlight text={deal.address} query={searchTerm} /></p></td><td className="px-8 py-6"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${deal.status === 'ACTIVE' ? 'bg-blue-50 text-blue-600 border-blue-100' : deal.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>{deal.status}</span></td><td className="px-8 py-6 text-sm font-bold text-slate-600">{new Date(deal.date).toLocaleDateString('en-US', { timeZone: TZ })}</td><td className="px-8 py-6"><p className="text-sm font-black text-slate-800">${deal.salePrice.toLocaleString()}</p><p className="text-[10px] text-emerald-600 font-bold uppercase">GCI: ${deal.commissionAmount.toLocaleString()}</p></td><td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-1 rounded">{deal.side}</span></td><td className="px-8 py-6"><div className="flex items-center space-x-2"><i className={`${getSourceIcon(deal.source || '').icon} ${getSourceIcon(deal.source || '').color} text-[11px]`}></i><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{deal.source}</span></div></td><td className="px-8 py-6 text-right"><div className="flex items-center justify-end space-x-2 transition-opacity"><button onClick={() => handleOpenEdit(deal)} className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button><button onClick={() => setDealToDelete(deal)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-xs"></i></button></div></td></tr>
+            ))}</tbody></table></div>
+          </div>
+        )
+      ) : (
+        /* Focused View for Single Status */
+        <div className="space-y-8">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
+                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><i className="fas fa-folder-tree"></i></div>
+                <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Matching</p><p className="text-xl font-black text-slate-800">{totalDealsMatching} Units</p></div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><i className="fas fa-chart-line"></i></div>
+                <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sales Volume</p><p className="text-xl font-black text-slate-800">${totalFilteredVolume.toLocaleString()}</p></div>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm flex items-center space-x-4">
+                <div className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200"><i className="fas fa-money-bill-trend-up"></i></div>
+                <div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Gross GCI</p><p className="text-xl font-black text-slate-800">${totalFilteredGCI.toLocaleString()}</p></div>
+              </div>
+              <div className="bg-slate-900 rounded-2xl p-6 shadow-xl flex items-center space-x-4 text-white">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0"><i className="fas fa-filter"></i></div>
+                <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Filter</p><p className="text-xl font-black">{getStatusLabel(statusFilter)}</p></div>
+              </div>
+           </div>
+
+           {displayMode === 'tile' ? (
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {paginatedDeals.map(deal => renderDealCard(deal))}
+                {paginatedDeals.length === 0 && (
+                  <div className="col-span-full py-24 text-center bg-white border border-slate-200 rounded-[3rem] border-dashed">
+                     <i className="fas fa-magnifying-glass text-5xl text-slate-200 mb-4"></i>
+                     <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No deals match your current filters</p>
+                  </div>
+                )}
+             </div>
+           ) : (
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('name')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Name {renderSortIcon('name')}</div></th>
+                    <th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('date')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Date {renderSortIcon('date')}</div></th>
+                    <th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('price')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Price {renderSortIcon('price')}</div></th>
+                    <th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('side')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Side {renderSortIcon('side')}</div></th>
+                    <th className="px-8 py-5 cursor-pointer group" onClick={() => handleSort('source')}><div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Source {renderSortIcon('source')}</div></th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedDeals.map(deal => (
+                    <tr key={deal.id} className="hover:bg-slate-50 transition-all group">
+                      <td className="px-8 py-6"><p className="text-sm font-black text-slate-800"><Highlight text={deal.leadName} query={searchTerm} /></p><p className="text-[11px] text-slate-400 font-medium truncate max-w-xs"><Highlight text={deal.address} query={searchTerm} /></p></td>
+                      <td className="px-8 py-6 text-sm font-bold text-slate-600">{new Date(deal.date).toLocaleDateString('en-US', { timeZone: TZ })}</td>
+                      <td className="px-8 py-6"><p className="text-sm font-black text-slate-800">${deal.salePrice.toLocaleString()}</p><p className="text-[10px] text-emerald-600 font-bold uppercase">GCI: ${deal.commissionAmount.toLocaleString()}</p></td>
+                      <td className="px-8 py-6"><span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-1 rounded">{deal.side}</span></td>
+                      <td className="px-8 py-6"><div className="flex items-center space-x-2"><i className={`${getSourceIcon(deal.source || '').icon} ${getSourceIcon(deal.source || '').color} text-[11px]`}></i><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{deal.source}</span></div></td>
+                      <td className="px-8 py-6 text-right"><div className="flex items-center justify-end space-x-2 transition-opacity"><button onClick={() => handleOpenEdit(deal)} className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-xs"></i></button><button onClick={() => setDealToDelete(deal)} className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-xs"></i></button></div></td>
+                    </tr>
+                  ))}
+                  {paginatedDeals.length === 0 && (
+                    <tr><td colSpan={6} className="px-8 py-20 text-center"><div className="flex flex-col items-center justify-center text-slate-300"><i className="fas fa-magnifying-glass text-5xl mb-4 opacity-20"></i><p className="text-sm font-black uppercase tracking-widest">No matching transactions found</p></div></td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+           )}
         </div>
       )}
 

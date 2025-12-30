@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Brokerage } from '../types';
 import { NavItemConfig, NotificationItem } from '../App';
@@ -105,7 +104,10 @@ const Layout: React.FC<LayoutProps> = ({
       {/* Sidebar */}
       <aside className={`${isCollapsed ? 'w-24' : 'w-72'} bg-slate-900 text-slate-300 flex flex-col shrink-0 transition-all duration-300 ease-in-out`}>
         <div className={`px-6 pt-10 pb-6 flex flex-col items-center ${isCollapsed ? 'space-y-6' : 'items-start space-y-4'}`}>
-          <div className="flex items-center space-x-3 text-white overflow-hidden w-full">
+          <div 
+            className="flex items-center space-x-3 text-white overflow-hidden w-full cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setView('dashboard')}
+          >
             <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
               <i className="fas fa-bolt text-indigo-100 text-sm"></i>
             </div>
@@ -271,9 +273,47 @@ const Layout: React.FC<LayoutProps> = ({
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className={`h-20 border-b flex items-center justify-between px-10 shrink-0 z-40 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h1 className={`text-2xl font-black capitalize tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-            {currentView === 'lead-detail' ? 'Lead Profile' : currentView.replace('-', ' ')}
-          </h1>
+          <div className="flex items-center space-x-4 overflow-hidden">
+             <h1 
+               onClick={() => setView('dashboard')}
+               className={`text-2xl font-black capitalize tracking-tight cursor-pointer transition-all hover:text-indigo-600 active:scale-95 shrink-0 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}
+             >
+               {currentView === 'lead-detail' ? 'Lead Profile' : currentView.replace('-', ' ')}
+             </h1>
+          </div>
+
+          {/* New Center Navigation Tabs with Colorful Icons */}
+          <div className={`hidden lg:flex items-center p-1 rounded-2xl border shadow-inner transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
+             <button 
+               onClick={() => setView('leads')} 
+               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${currentView === 'leads' ? (isDarkMode ? 'bg-slate-900 text-indigo-400 shadow-sm' : 'bg-white shadow-sm text-indigo-600') : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+             >
+               <i className={`fas fa-users text-[10px] ${currentView === 'leads' ? 'text-blue-600' : 'text-blue-500/60 group-hover:text-blue-500'}`}></i>
+               <span>Leads</span>
+             </button>
+             <button 
+               onClick={() => setView('contacts')} 
+               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${currentView === 'contacts' ? (isDarkMode ? 'bg-slate-900 text-indigo-400 shadow-sm' : 'bg-white shadow-sm text-indigo-600') : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+             >
+               <i className={`fas fa-address-book text-[10px] ${currentView === 'contacts' ? 'text-emerald-600' : 'text-emerald-500/60 group-hover:text-emerald-500'}`}></i>
+               <span>Contacts</span>
+             </button>
+             <button 
+               onClick={() => setView('marketing')} 
+               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${currentView === 'marketing' ? (isDarkMode ? 'bg-slate-900 text-indigo-400 shadow-sm' : 'bg-white shadow-sm text-indigo-600') : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+             >
+               <i className={`fas fa-envelope text-[10px] ${currentView === 'marketing' ? 'text-pink-600' : 'text-pink-500/60 group-hover:text-pink-500'}`}></i>
+               <span>Email</span>
+             </button>
+             <button 
+               onClick={() => setView('tasks')} 
+               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${currentView === 'tasks' ? (isDarkMode ? 'bg-slate-900 text-indigo-400 shadow-sm' : 'bg-white shadow-sm text-indigo-600') : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+             >
+               <i className={`fas fa-check-circle text-[10px] ${currentView === 'tasks' ? 'text-orange-600' : 'text-orange-500/60 group-hover:text-orange-500'}`}></i>
+               <span>Tasks</span>
+             </button>
+          </div>
+
           <div className="flex items-center space-x-6">
             {/* Dark Mode Toggle Button */}
             <button 
