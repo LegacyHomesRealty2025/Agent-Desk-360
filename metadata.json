@@ -1,0 +1,9 @@
+{
+  "name": "Agent Desk 360",
+  "description": "A high-performance, real-estate-focused multi-tenant SaaS for managing leads, tracking agent performance, and automating follow-ups.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}

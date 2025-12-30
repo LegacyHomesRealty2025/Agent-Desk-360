@@ -1,0 +1,165 @@
+import React, { useState, useRef } from 'react';
+import { User, UserRole, Brokerage } from '../types';
+import { Invitation } from '../App';
+
+interface JoinViewProps {
+  invitation: Invitation;
+  brokerage: Brokerage;
+  onComplete: (user: User) => void;
+}
+
+const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }) => {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    licenseNumber: '',
+    avatar: `https://picsum.photos/seed/${Math.random()}/400`,
+    password: ''
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const resizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const size = 400;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject('Failed to get canvas context');
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsProcessing(true);
+      const resizedDataUrl = await resizeImage(file);
+      setFormData(prev => ({ ...prev, avatar: resizedDataUrl }));
+    } catch (err) {
+      console.error('Error processing image:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newUser: User = {
+      id: `user_${Date.now()}`,
+      brokerageId: brokerage.id,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: invitation.email,
+      role: invitation.role,
+      phone: formData.phone,
+      licenseNumber: formData.licenseNumber,
+      avatar: formData.avatar
+    };
+    onComplete(newUser);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900 flex items-center justify-center p-6 overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <img 
+          src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1920&q=80" 
+          className="w-full h-full object-cover opacity-20" 
+          alt="Luxury Real Estate" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900/90 to-indigo-900/30"></div>
+      </div>
+
+      <div className="w-full max-w-4xl relative z-10 animate-in fade-in zoom-in-95 duration-700 flex flex-col md:flex-row bg-white rounded-[3rem] shadow-[0_48px_96px_-12px_rgba(0,0,0,0.5)] overflow-hidden">
+        {/* Left Side: Welcome */}
+        <div className="w-full md:w-80 bg-indigo-600 p-12 text-white flex flex-col justify-between">
+           <div className="space-y-8">
+              <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-2xl shadow-xl">
+                 <i className="fas fa-bolt"></i>
+              </div>
+              <div className="space-y-4">
+                 <h1 className="text-4xl font-black leading-tight tracking-tight">Join the Elite Roster.</h1>
+                 <p className="text-indigo-100 font-medium leading-relaxed opacity-80">
+                   {brokerage.name} has invited you to set up your professional agent profile on Agent Desk 360.
+                 </p>
+              </div>
+           </div>
+           <div className="pt-12 border-t border-white/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-2">Authenticated Email</p>
+              <p className="text-sm font-bold truncate">{invitation.email}</p>
+           </div>
+        </div>
+
+        {/* Right Side: Onboarding Form */}
+        <div className="flex-1 p-10 md:p-16 max-h-[90vh] overflow-y-auto scrollbar-hide">
+          <div className="mb-12">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Create Your Account</h2>
+            <p className="text-sm text-slate-500 font-medium mt-1">Complete your identity for the brokerage pipeline.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-10">
+            <div className="flex flex-col items-center space-y-4">
+               <div className="relative group">
+                  <img src={formData.avatar} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-xl" alt="Profile" />
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer">
+                    <i className="fas fa-camera text-2xl mb-1"></i>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Upload Photo</span>
+                  </button>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">First Name</label>
+                <input required value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Last Name</label>
+                <input required value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mobile Phone</label>
+                <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DRE License #</label>
+                <input required value={formData.licenseNumber} onChange={e => setFormData({...formData, licenseNumber: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-black text-indigo-600 outline-none" placeholder="DRE# 00000000" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Set Secure Password</label>
+              <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" placeholder="••••••••" />
+            </div>
+
+            <button type="submit" className="w-full py-6 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3">
+               <span>Complete Professional Setup</span>
+               <i className="fas fa-chevron-right"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default JoinView;
