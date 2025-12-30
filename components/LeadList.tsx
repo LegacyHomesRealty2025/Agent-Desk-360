@@ -13,7 +13,7 @@ interface LeadListProps {
   onUpdateTags: (tags: string[]) => void;
 }
 
-type SortOption = 'TEMP_DESC' | 'WARM_FIRST' | 'NORMAL_FIRST' | 'TEMP_ASC' | 'NEWEST_ADDED' | 'OLDEST_ADDED' | 'RECENTLY_UPDATED' | 'SOURCE_ASC' | 'SOURCE_DESC' | 'STATUS_ASC' | 'STATUS_DESC' | 'BUYERS_FIRST' | 'SELLERS_FIRST' | 'INVESTORS_FIRST' | 'PAST_CLIENTS_FIRST';
+type SortOption = 'TEMP_DESC' | 'WARM_FIRST' | 'NORMAL_FIRST' | 'TEMP_ASC' | 'NEWEST_ADDED' | 'OLDEST_ADDED' | 'RECENTLY_UPDATED' | 'SOURCE_ASC' | 'SOURCE_DESC' | 'STATUS_ASC' | 'STATUS_DESC' | 'BUYERS_FIRST' | 'SELLERS_FIRST' | 'INVESTORS_FIRST' | 'PAST_CLIENTS_FIRST' | 'NAME_ASC' | 'NAME_DESC';
 type DisplayMode = 'tile' | 'list';
 type ColumnId = 'selection' | 'hotness' | 'stage' | 'name' | 'address' | 'secondary' | 'budget' | 'source' | 'updated' | 'actions';
 type TabId = string; // Status strings
@@ -35,7 +35,9 @@ const sortLabels: Record<SortOption, string> = {
   BUYERS_FIRST: 'Buyers First',
   SELLERS_FIRST: 'Sellers First',
   INVESTORS_FIRST: 'Investors First',
-  PAST_CLIENTS_FIRST: 'Past Clients First'
+  PAST_CLIENTS_FIRST: 'Past Clients First',
+  NAME_ASC: 'Name (A-Z)',
+  NAME_DESC: 'Name (Z-A)'
 };
 
 const DEFAULT_COLUMN_ORDER: ColumnId[] = ['selection', 'hotness', 'stage', 'name', 'address', 'secondary', 'budget', 'source', 'updated', 'actions'];
@@ -414,6 +416,8 @@ const LeadList: React.FC<LeadListProps> = ({
           case 'SOURCE_DESC': return b.source.localeCompare(a.source);
           case 'STATUS_ASC': return a.status.localeCompare(b.status);
           case 'STATUS_DESC': return b.status.localeCompare(a.status);
+          case 'NAME_ASC': return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+          case 'NAME_DESC': return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
           default: return 0;
         }
       });
@@ -587,6 +591,43 @@ const LeadList: React.FC<LeadListProps> = ({
     }
   };
 
+  const handleHeaderClick = (colId: ColumnId) => {
+    switch (colId) {
+      case 'hotness':
+        setSortBy(prev => prev === 'TEMP_DESC' ? 'TEMP_ASC' : 'TEMP_DESC');
+        break;
+      case 'stage':
+        setSortBy(prev => prev === 'STATUS_ASC' ? 'STATUS_DESC' : 'STATUS_ASC');
+        break;
+      case 'name':
+        setSortBy(prev => prev === 'NAME_ASC' ? 'NAME_DESC' : 'NAME_ASC');
+        break;
+      case 'source':
+        setSortBy(prev => prev === 'SOURCE_ASC' ? 'SOURCE_DESC' : 'SOURCE_ASC');
+        break;
+      case 'updated':
+        setSortBy(prev => prev === 'RECENTLY_UPDATED' ? 'OLDEST_ADDED' : 'RECENTLY_UPDATED');
+        break;
+    }
+  };
+
+  const getSortIcon = (colId: ColumnId) => {
+    const isName = colId === 'name' && (sortBy === 'NAME_ASC' || sortBy === 'NAME_DESC');
+    const isHot = colId === 'hotness' && (sortBy === 'TEMP_DESC' || sortBy === 'TEMP_ASC');
+    const isStage = colId === 'stage' && (sortBy === 'STATUS_ASC' || sortBy === 'STATUS_DESC');
+    const isSource = colId === 'source' && (sortBy === 'SOURCE_ASC' || sortBy === 'SOURCE_DESC');
+    const isUpdated = colId === 'updated' && (sortBy === 'RECENTLY_UPDATED' || sortBy === 'OLDEST_ADDED');
+
+    if (!isName && !isHot && !isStage && !isSource && !isUpdated) return null;
+
+    let isAsc = false;
+    if (sortBy === 'NAME_ASC' || sortBy === 'TEMP_ASC' || sortBy === 'STATUS_ASC' || sortBy === 'SOURCE_ASC' || sortBy === 'OLDEST_ADDED') {
+      isAsc = true;
+    }
+
+    return <i className={`fas fa-chevron-${isAsc ? 'up' : 'down'} ml-2 text-[8px] text-indigo-500`}></i>;
+  };
+
   const renderCell = (lead: Lead, key: ColumnId) => {
     switch (key) {
       case 'selection':
@@ -602,27 +643,21 @@ const LeadList: React.FC<LeadListProps> = ({
         );
       case 'hotness':
         return (
-          <button 
-            onClick={(e) => { e.stopPropagation(); setSortBy(sortBy === 'TEMP_DESC' ? 'TEMP_ASC' : 'TEMP_DESC'); }}
-            className="flex items-center space-x-2 group/hot"
-          >
+          <div className="flex items-center space-x-2">
             <div className={`w-2.5 h-2.5 rounded-full ${
               lead.temperature === LeadTemperature.HOT ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 
               lead.temperature === LeadTemperature.WARM ? 'bg-orange-500' : 
               lead.temperature === LeadTemperature.COLD ? 'bg-blue-500' : 
               'bg-slate-300'
             }`}></div>
-            <span className="text-xs font-black text-slate-600 uppercase tracking-tighter group-hover/hot:text-indigo-600 transition-colors">{lead.temperature}</span>
-          </button>
+            <span className="text-xs font-black text-slate-600 uppercase tracking-tighter">{lead.temperature}</span>
+          </div>
         );
       case 'stage':
         return (
-          <button 
-            onClick={(e) => { e.stopPropagation(); setSortBy(sortBy === 'STATUS_ASC' ? 'STATUS_DESC' : 'STATUS_ASC'); }}
-            className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full border hover:shadow-md transition-all ${getStatusBadgeClass(lead.status)}`}
-          >
+          <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${getStatusBadgeClass(lead.status)}`}>
             {lead.status}
-          </button>
+          </span>
         );
       case 'name':
         return (
@@ -782,7 +817,7 @@ const LeadList: React.FC<LeadListProps> = ({
                </button>
                <button 
                  onClick={handleBulkDelete}
-                 className="h-[48px] px-6 bg-rose-600 text-white border border-rose-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2"
+                 className="h-[48px] px-6 bg-rose-600 text-white border border-rose-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2 ml-1"
                >
                  <i className="fas fa-trash-can"></i>
                  <span>Delete</span>
@@ -930,17 +965,28 @@ const LeadList: React.FC<LeadListProps> = ({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 {columnOrder.map((colId, idx) => (
-                  <th key={colId} className={`px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest ${colId === 'selection' ? 'w-16 text-center' : ''}`}>
-                    {colId === 'selection' ? (
-                      <div className="flex items-center justify-center">
-                        <input 
-                          type="checkbox" 
-                          checked={isPageAllSelected}
-                          onChange={handleSelectAllOnPage}
-                          className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-all"
-                        />
-                      </div>
-                    ) : columnLabels[colId]}
+                  <th 
+                    key={colId} 
+                    onClick={() => handleHeaderClick(colId)}
+                    className={`px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest transition-colors ${['hotness', 'stage', 'name', 'source', 'updated'].includes(colId) ? 'cursor-pointer hover:bg-indigo-50' : ''} ${colId === 'selection' ? 'w-16 text-center' : ''}`}
+                  >
+                    <div className="flex items-center">
+                      {colId === 'selection' ? (
+                        <div className="flex items-center justify-center">
+                          <input 
+                            type="checkbox" 
+                            checked={isPageAllSelected}
+                            onChange={(e) => { e.stopPropagation(); handleSelectAllOnPage(); }}
+                            className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-all"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <span>{columnLabels[colId]}</span>
+                          {getSortIcon(colId)}
+                        </>
+                      )}
+                    </div>
                   </th>
                 ))}
               </tr>

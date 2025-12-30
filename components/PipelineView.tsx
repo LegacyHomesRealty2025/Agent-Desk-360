@@ -638,7 +638,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               <i className="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
               <input 
                 type="text" 
-                placeholder="Search transactions..." 
+                placeholder="Search transactions by name, phone, email, or address..." 
                 value={searchTerm} 
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
                 className="w-full pl-16 pr-8 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 outline-none transition-all" 
