@@ -1,5 +1,4 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Brokerage } from '../types';
 
 interface ProfileViewProps {
@@ -24,6 +23,30 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
   const [passwordStatus, setPasswordStatus] = useState<'IDLE' | 'SUCCESS' | 'ERROR'>('IDLE');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync formData if user prop changes (important for cross-view synchronization)
+  useEffect(() => {
+    setFormData(user);
+  }, [user]);
+
+  const formatPhone = (value: string) => {
+    if (!value) return value;
+    const phoneNumber = value.replace(/[^\d]/g, '');
+    const phoneNumberLength = phoneNumber.length;
+    if (phoneNumberLength < 1) return "";
+    if (phoneNumberLength < 4) return `(${phoneNumber}`;
+    if (phoneNumberLength < 7) return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  };
+
+  const handleLicenseChange = (val: string) => {
+    const prefix = "DRE Lic# ";
+    if (!val.startsWith(prefix)) {
+      setFormData({ ...formData, licenseNumber: prefix });
+    } else {
+      setFormData({ ...formData, licenseNumber: val });
+    }
+  };
 
   const resizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -142,7 +165,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
             <div className="flex items-center space-x-6 text-indigo-100/80 font-bold text-sm">
               <span className="flex items-center"><i className="fas fa-building mr-2 text-indigo-300"></i>{brokerage.name}</span>
               <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-              <span className="flex items-center"><i className="fas fa-id-card mr-2 text-indigo-300"></i>{formData.licenseNumber || 'License Pending'}</span>
+              <span className="flex items-center"><i className="fas fa-id-card mr-2 text-indigo-300"></i>{formData.licenseNumber || 'DRE Lic# Pending'}</span>
             </div>
           </div>
         </div>
@@ -198,7 +221,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
                   <input 
                     type="tel" 
                     value={formData.phone} 
-                    onChange={e => setFormData({...formData, phone: e.target.value})} 
+                    onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})} 
                     className={`w-full border rounded-2xl px-7 py-5 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white focus:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-700 focus:bg-white'}`} 
                   />
                </div>
@@ -207,9 +230,9 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
                   <input 
                     type="text" 
                     value={formData.licenseNumber} 
-                    onChange={e => setFormData({...formData, licenseNumber: e.target.value})} 
+                    onChange={e => handleLicenseChange(e.target.value)} 
                     className={`w-full border rounded-2xl px-7 py-5 font-black outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-indigo-400 focus:bg-slate-700' : 'bg-slate-50 border-slate-200 text-indigo-600 focus:bg-white'}`} 
-                    placeholder="e.g. DRE# 01234567"
+                    placeholder="DRE Lic# "
                   />
                </div>
             </div>

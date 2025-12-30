@@ -32,11 +32,11 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
 
   // Sync internal ordered state when users prop changes (e.g. addition/deletion)
   useEffect(() => {
-    // Ensure Broker (Josephine Sharma) is always first in the order
+    // Force Broker (Josephine Sharma) to index 0 always and keep others sorted
     const sorted = [...users].sort((a, b) => {
       if (a.role === UserRole.BROKER) return -1;
       if (b.role === UserRole.BROKER) return 1;
-      return 0;
+      return a.lastName.localeCompare(b.lastName);
     });
     setOrderedUsers(sorted);
   }, [users]);
@@ -73,21 +73,21 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
   };
 
   const handleDragStart = (id: string, role: UserRole) => {
-    // Broker tile is fixed and cannot be moved
+    // Josephine (Broker) is fixed and cannot be moved
     if (!isAdmin || role === UserRole.BROKER) return;
     setDraggedUserId(id);
   };
 
   const handleDragOver = (e: React.DragEvent, id: string, role: UserRole) => {
     e.preventDefault();
-    // Cannot drag over or displace Broker
+    // Cannot displace Broker
     if (!isAdmin || role === UserRole.BROKER) return;
     if (dragOverUserId !== id) setDragOverUserId(id);
   };
 
   const handleDrop = (e: React.DragEvent, targetId: string, role: UserRole) => {
     e.preventDefault();
-    // Restrictions: Must be admin, cannot move broker, cannot drop on broker position
+    // Restriction: Must be admin, cannot move broker, cannot drop on broker's reserved index
     if (!isAdmin || !draggedUserId || draggedUserId === targetId || role === UserRole.BROKER) {
       setDraggedUserId(null);
       setDragOverUserId(null);
@@ -98,7 +98,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
     const draggedIdx = newOrder.findIndex(u => u.id === draggedUserId);
     const targetIdx = newOrder.findIndex(u => u.id === targetId);
 
-    // Josephine Sharma is fixed at index 0, so target index must be at least 1
+    // Target must be at least index 1 because index 0 is locked for the Broker
     const safeTargetIdx = Math.max(1, targetIdx);
 
     const [removed] = newOrder.splice(draggedIdx, 1);
@@ -223,7 +223,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
         <div className="flex items-center space-x-4">
           <h2 className="text-3xl font-black text-slate-800 tracking-tight">Team Roster</h2>
-          <div className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-2xl text-sm font-black border border-indigo-100 shadow-sm">
+          <div className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-2xl text-sm font-black border border-indigo-100 shadow-sm" title="Total Team Members">
             {users.length}
           </div>
         </div>
@@ -300,7 +300,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
                   ${draggedUserId === user.id ? 'opacity-30 scale-95' : ''} 
                   ${dragOverUserId === user.id ? 'ring-4 ring-indigo-500/20 border-indigo-400' : isBroker ? 'border-indigo-500 shadow-md shadow-indigo-100' : 'border-slate-200'}`}
               >
-                {/* Order Index Badge */}
+                {/* Sequential Number Badge */}
                 <div className={`absolute top-6 left-6 w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black z-20 shadow-lg group-hover:scale-110 transition-transform ${isBroker ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
                   {index + 1}
                 </div>
@@ -328,6 +328,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
                 <h3 className={`text-xl font-black transition-colors ${isBroker ? 'text-indigo-600' : 'text-slate-800 group-hover:text-blue-700'}`}>{user.firstName} {user.lastName}</h3>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 mb-6 group-hover:text-blue-400">{isBroker ? 'Broker / Admin' : 'Real Estate Agent'}</p>
                 
+                {/* Contact Information block - Matches Profile fields */}
                 <div className="w-full space-y-3 pt-6 border-t border-slate-50 group-hover:border-blue-100 transition-colors">
                   <div className="flex items-center space-x-3 text-slate-500 text-sm">
                     <div className="w-8 h-8 bg-slate-50 group-hover:bg-white rounded-lg flex items-center justify-center shrink-0 transition-colors"><i className="fas fa-envelope text-[10px]"></i></div>
@@ -339,7 +340,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
                   </div>
                   <div className="flex items-center space-x-3 text-slate-500 text-sm">
                     <div className="w-8 h-8 bg-slate-50 group-hover:bg-white rounded-lg flex items-center justify-center shrink-0 transition-colors"><i className="fas fa-id-card text-[10px]"></i></div>
-                    <span className={`font-black ${isBroker ? 'text-indigo-600' : 'text-slate-700 group-hover:text-blue-700'}`}>{user.licenseNumber || 'PENDING DRE'}</span>
+                    <span className={`font-black ${isBroker ? 'text-indigo-600' : 'text-slate-700 group-hover:text-blue-700'}`}>{user.licenseNumber || 'DRE Lic# Pending'}</span>
                   </div>
                 </div>
                 {isBroker && (
@@ -358,9 +359,9 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">#</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Team Member</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">DRE License</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Direct Phone</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">DRE License #</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
@@ -450,7 +451,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Email</label><input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" /></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Phone Number</label><input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
+                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Direct Phone</label><input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -461,7 +462,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">License Number (DRE)</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">DRE License #</label>
                     <input 
                       type="text" 
                       value={formData.licenseNumber} 

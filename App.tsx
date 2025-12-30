@@ -313,6 +313,13 @@ const App: React.FC = () => {
     setCurrentUser(updated);
   };
 
+  const handleUpdateOtherUser = (updated: User) => {
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    if (currentUser && currentUser.id === updated.id) {
+      setCurrentUser(updated);
+    }
+  };
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
@@ -392,7 +399,7 @@ const App: React.FC = () => {
           users={activeUsers} 
           currentUser={currentUser} 
           onAddUser={u => setUsers(prev => [u, ...prev])} 
-          onUpdateUser={u => setUsers(prev => prev.map(prevU => prevU.id === u.id ? u : prevU))} 
+          onUpdateUser={handleUpdateOtherUser} 
           onDeleteUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: true, deletedAt: new Date().toISOString()} : u))}
           onInviteUser={handleInviteAgent}
         />
