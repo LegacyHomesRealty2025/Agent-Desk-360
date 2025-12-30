@@ -10,6 +10,14 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         html { font-size: 12px; }
         body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        
+        @keyframes slow-blink {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.3; transform: scale(0.9); }
+        }
+        .animate-slow-blink {
+          animation: slow-blink 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 <script type="importmap">
 {

@@ -102,26 +102,41 @@ const Layout: React.FC<LayoutProps> = ({
         </div>
 
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto scrollbar-hide">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              className={`w-full flex items-center transition-all group relative overflow-hidden ${
-                isCollapsed ? 'justify-center py-4 rounded-2xl' : 'px-4 py-3 rounded-xl'
-              } ${
-                currentView === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
-              }`}
-            >
-              <i className={`fas ${item.icon} ${isCollapsed ? 'text-xl' : 'w-8 text-lg'}`}></i>
-              {!isCollapsed && <span className="flex-1 text-left font-black text-base">{item.label}</span>}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const hasAlert = (item.id === 'calendar' && notifications.hasEvents) || (item.id === 'tasks' && notifications.hasTasks);
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => setView(item.id)}
+                className={`w-full flex items-center transition-all group relative overflow-hidden ${
+                  isCollapsed ? 'justify-center py-4 rounded-2xl' : 'px-4 py-3 rounded-xl'
+                } ${
+                  currentView === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'
+                }`}
+              >
+                <i className={`fas ${item.icon} ${isCollapsed ? 'text-xl' : 'w-8 text-lg'}`}></i>
+                {!isCollapsed && (
+                  <div className="flex-1 flex items-center space-x-3 ml-1">
+                    <span className="text-left font-black text-base">{item.label}</span>
+                    {hasAlert && (
+                      <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-slow-blink shadow-[0_0_8px_rgba(249,115,22,0.6)] shrink-0"></span>
+                    )}
+                  </div>
+                )}
+                
+                {/* Collapsed Mode Alert indicator (Top Corner) */}
+                {isCollapsed && hasAlert && (
+                  <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-orange-500 rounded-full animate-slow-blink shadow-[0_0_10px_rgba(249,115,22,0.6)]"></span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         {/* User Switching Area (Taskbar bottom left) */}
         <div className="p-4 space-y-3 bg-slate-950/30">
            <div className="flex flex-col space-y-2">
-              {/* Admin Switcher - light green in admin view, light red in agent view */}
               <button 
                 onClick={() => adminUser && onSwitchUser(adminUser.id)}
                 className={`flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-indigo-600 hover:text-white group ${isCollapsed ? 'justify-center' : ''} ${
@@ -135,7 +150,6 @@ const Layout: React.FC<LayoutProps> = ({
                 {!isCollapsed && <span className="font-black uppercase text-[10px] tracking-widest">Broker/Admin</span>}
               </button>
 
-              {/* Agent Switcher - light green when an agent is active */}
               <div className="relative" ref={agentSwitcherRef}>
                 <button 
                   onClick={() => setIsAgentSwitcherOpen(!isAgentSwitcherOpen)}
@@ -236,7 +250,7 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all relative ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-white border-slate-200 text-slate-600'}`}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all relative ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-white border-slate-200 text-slate-600'} ${isNotificationOpen ? 'ring-2 ring-indigo-500' : ''}`}
               >
                 <i className="fas fa-bell text-lg"></i>
                 {notifications.totalCount > 0 && (
@@ -245,6 +259,38 @@ const Layout: React.FC<LayoutProps> = ({
                   </span>
                 )}
               </button>
+
+              {/* NOTIFICATION PANEL */}
+              {isNotificationOpen && (
+                <div className={`absolute right-0 mt-3 w-80 border rounded-[2rem] shadow-2xl z-[100] py-4 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-200 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                  <div className={`px-6 py-3 border-b mb-2 flex justify-between items-center ${isDarkMode ? 'border-slate-700' : 'border-slate-50'}`}>
+                    <p className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Notifications</p>
+                    <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-black shadow-sm">{notifications.totalCount}</span>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
+                    {notifications.items.length > 0 ? notifications.items.map(item => (
+                      <button 
+                        key={item.id}
+                        onClick={() => { setView(item.view); setIsNotificationOpen(false); }}
+                        className={`w-full text-left px-6 py-4 flex items-start space-x-4 transition-colors group ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-indigo-50/50'}`}
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'TASK' ? 'bg-orange-100 text-orange-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                          <i className={`fas ${item.type === 'TASK' ? 'fa-check-circle' : 'fa-calendar-star'}`}></i>
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className={`text-xs font-black truncate ${isDarkMode ? 'text-white' : 'text-slate-800'} group-hover:text-indigo-600 transition-colors`}>{item.title}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">{item.description}</p>
+                        </div>
+                      </button>
+                    )) : (
+                      <div className="py-16 text-center opacity-40">
+                        <i className="fas fa-bell-slash text-4xl mb-4 text-slate-300"></i>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Alerts at this time</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="relative" ref={profileDropdownRef}>
