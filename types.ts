@@ -1,4 +1,3 @@
-
 export enum UserRole {
   BROKER = 'BROKER',
   AGENT = 'AGENT'
@@ -119,6 +118,8 @@ export interface Deal {
   assignedUserId: string;
   leadId?: string;
   leadName: string;
+  clientPhone?: string;
+  clientEmail?: string;
   status: 'ACTIVE' | 'PENDING' | 'CLOSED';
   side: 'BUYER' | 'SELLER' | 'BOTH';
   address: string;
@@ -131,6 +132,7 @@ export interface Deal {
   deletedAt?: string;
   // Transaction Management Fields
   escrowCompany?: string;
+  escrowAddress?: string;
   escrowOfficer?: string;
   escrowPhone?: string;
   escrowEmail?: string;
