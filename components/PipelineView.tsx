@@ -382,10 +382,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     }
   };
 
-  const DealCard = ({ deal }: { deal: Deal }) => {
+  // Explicitly typed DealCard as React.FC
+  const DealCard: React.FC<{ deal: Deal }> = ({ deal }) => {
     const branding = getSourceBranding(deal.source);
     return (
-      <div key={deal.id} className="bg-white border border-slate-200 rounded-[1.25rem] p-6 shadow-sm hover:shadow-md transition-all relative group overflow-hidden cursor-pointer" onClick={() => handleOpenEdit(deal)}>
+      <div className="bg-white border border-slate-200 rounded-[1.25rem] p-6 shadow-sm hover:shadow-md transition-all relative group overflow-hidden cursor-pointer" onClick={() => handleOpenEdit(deal)}>
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center space-x-3">
             <div className={`w-8 h-8 ${branding.bg} ${branding.color} rounded-full flex items-center justify-center text-xs border border-current/10 transition-colors`}>
@@ -427,7 +428,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     );
   };
 
-  const ColumnHeader = ({ status, deals }: { status: StatusFilter; deals: Deal[] }) => {
+  // Explicitly typed ColumnHeader as React.FC
+  const ColumnHeader: React.FC<{ status: StatusFilter; deals: Deal[] }> = ({ status, deals }) => {
     const vol = deals.reduce((sum, d) => sum + d.salePrice, 0);
     return (
       <button 
@@ -569,7 +571,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full -mr-20 -mt-20 blur-3xl"></div>
         </div>
         
-        {/* Heading Section - Shrunk text size */}
+        {/* Heading Section */}
         <div className="flex items-center space-x-5 relative z-10">
           {statusFilter !== 'ALL' && (
             <button 
@@ -589,7 +591,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
           </div>
         </div>
 
-        {/* Filters Row - Shrunk internal padding and gaps */}
+        {/* Filters Row */}
         <div className="flex flex-col md:flex-row items-center gap-4 relative z-30">
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner shrink-0">
             <button onClick={() => { setYearFilter('CURRENT'); setCurrentPage(1); }} className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] transition-all ${yearFilter === 'CURRENT' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>Current Year</button>
@@ -605,10 +607,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                     <button onClick={() => { setYearFilter('PREVIOUS'); setIsYearDropdownOpen(false); setCurrentPage(1); }} className="w-full text-left px-6 py-3 hover:bg-indigo-50 flex items-center space-x-3 group transition-colors">
                       <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors"><i className="fas fa-calendar-alt text-xs text-slate-400 group-hover:text-indigo-600"></i></div>
                       <div><p className="text-xs font-black text-slate-700">All Previous</p><p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Lifetime Records</p></div>
-                    </button>
-                    <button onClick={() => { setYearFilter('PREVIOUS'); setIsYearDropdownOpen(false); setCurrentPage(1); }} className="w-full text-left px-6 py-3 hover:bg-indigo-50 flex items-center space-x-3 group transition-colors">
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors"><i className="fas fa-history text-xs text-slate-400 group-hover:text-indigo-600"></i></div>
-                      <div><p className="text-xs font-black text-slate-700">2024 Records</p><p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Annual Archive</p></div>
                     </button>
                   </div>
                 </>
@@ -631,21 +629,20 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
 
         <div className="h-px bg-slate-100 w-full relative z-10"></div>
 
-        {/* Action Bar - Search and View Switcher */}
+        {/* Action Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
             <div className="relative max-w-2xl w-full group">
               <i className="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
               <input 
                 type="text" 
-                placeholder="Search transactions by name, phone, email, or address..." 
+                placeholder="Search transactions..." 
                 value={searchTerm} 
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
                 className="w-full pl-16 pr-8 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 outline-none transition-all" 
               />
             </div>
             
-            {/* View Switcher Buttons always next to search */}
             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner h-fit shrink-0">
               <button 
                 onClick={() => setDisplayMode('tile')} 
@@ -662,36 +659,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                 <span>List</span>
               </button>
             </div>
-
-            {/* List View specific filter toggle */}
-            {displayMode === 'list' && (
-              <div className="relative">
-                <button 
-                  onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                  className={`px-5 py-4 border rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm transition-all flex items-center space-x-3 ${statusFilter !== 'ALL' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
-                >
-                  <i className="fas fa-filter"></i>
-                  <span>{statusFilter === 'ALL' ? 'All Stages' : getStatusLabel(statusFilter)}</span>
-                  <i className={`fas fa-chevron-down text-[8px] transition-transform ${isStatusDropdownOpen ? 'rotate-180' : ''}`}></i>
-                </button>
-                {isStatusDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsStatusDropdownOpen(false)}></div>
-                    <div className="absolute left-0 mt-3 w-48 bg-white border border-slate-200 rounded-[1.5rem] shadow-2xl z-50 py-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                      {(['ALL', 'ACTIVE', 'PENDING', 'CLOSED'] as StatusFilter[]).map(status => (
-                        <button 
-                          key={status}
-                          onClick={() => { setStatusFilter(status); setIsStatusDropdownOpen(false); setCurrentPage(1); }}
-                          className={`w-full text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${statusFilter === status ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:bg-slate-50'}`}
-                        >
-                          {status === 'ALL' ? 'All Transactions' : getStatusLabel(status)}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
           </div>
           
           <div className="flex items-center space-x-3">
@@ -707,7 +674,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
         </div>
       </div>
 
-      {/* Logic: If ALL + TILE, show Kanban. If filtering OR using LIST mode, show standard list/tile grid */}
       {(statusFilter === 'ALL' && displayMode === 'tile') ? renderKanban() : renderFocusedView()}
 
       {/* Delete Confirmation Modal */}
@@ -722,7 +688,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               <h3 className="text-xl font-black text-slate-800 tracking-tight">Trash Transaction?</h3>
             </div>
             <p className="text-slate-600 mb-8 text-base font-semibold leading-relaxed">
-              Are you sure you want to delete the transaction for <span className="text-slate-900 font-black">{dealToDelete.address}</span>? This will move it to the trash bin.
+              Are you sure you want to delete the transaction for <span className="text-slate-900 font-black">{dealToDelete.address}</span>?
             </p>
             <div className="flex space-x-4">
               <button onClick={() => setDealToDelete(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
@@ -741,7 +707,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               <h3 className="text-2xl font-black text-slate-800 tracking-tight">Rearrange Columns</h3>
               <button onClick={() => setIsSettingsOpen(false)} className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-xl"></i></button>
             </div>
-            <p className="text-xs text-slate-400 font-medium mb-8 ml-1">Drag and drop the table headers below to reorder the list view layout.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {columnOrder.map((colId, idx) => (
                 <div 
@@ -760,7 +725,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               ))}
             </div>
             <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-between">
-              <button onClick={() => setColumnOrder(INITIAL_COLUMN_ORDER)} className="text-xs font-black text-rose-500 uppercase tracking-widest hover:underline flex items-center"><i className="fas fa-rotate-left mr-2"></i>Reset to Defaults</button>
+              <button onClick={() => setColumnOrder(INITIAL_COLUMN_ORDER)} className="text-xs font-black text-rose-500 uppercase tracking-widest hover:underline flex items-center"><i className="fas fa-rotate-left mr-2"></i>Reset</button>
               <button onClick={() => setIsSettingsOpen(false)} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-black transition-all">Save Layout</button>
             </div>
           </div>
@@ -770,32 +735,63 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
       {isModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={handleReset}></div>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-5xl relative z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] text-[12px]">
+          {/* Wrap everything in a form to ensure the Save button in the header triggers validation */}
+          <form onSubmit={handleSubmit} className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-5xl relative z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] text-[12px]">
             <div className="flex flex-col p-10 pb-4 shrink-0">
               <div className="flex items-center justify-between w-full mb-6">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">{editingDealId ? 'Edit Transaction' : 'New Transaction Entry'}</h3>
                 <div className="flex items-center space-x-4">
-                  <button onClick={() => handleSubmit()} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center space-x-3 active:scale-95"><i className="fas fa-save text-indigo-100"></i><span>Save</span></button>
-                  <button onClick={handleReset} className="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-200 transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 active:scale-90"><i className="fas fa-times text-2xl"></i></button>
+                  <button type="submit" className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center space-x-3 active:scale-95"><i className="fas fa-save text-indigo-100"></i><span>Save</span></button>
+                  <button type="button" onClick={handleReset} className="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 border border-slate-200 transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 active:scale-90"><i className="fas fa-times text-2xl"></i></button>
                 </div>
               </div>
               <div className="flex items-center space-x-4 overflow-x-auto scrollbar-hide bg-slate-50 p-1.5 rounded-2xl border border-slate-100 w-fit">
                 {[{ ref: clientRef, label: 'Client', icon: 'fa-user', color: 'text-blue-500' }, { ref: escrowRef, label: 'Escrow', icon: 'fa-file-contract', color: 'text-amber-500' }, { ref: lenderRef, label: 'Lender', icon: 'fa-hand-holding-dollar', color: 'text-emerald-500' }, { ref: titleRef, label: 'Title', icon: 'fa-building-circle-check', color: 'text-indigo-500' }, { ref: tcRef, label: 'TC', icon: 'fa-users-gear', color: 'text-rose-500' }, { ref: timelineRef, label: 'Timeline', icon: 'fa-clock-rotate-left', color: 'text-purple-500' }, { ref: notesRef, label: 'Notes', icon: 'fa-note-sticky', color: 'text-slate-500' }].map(nav => (
-                  <button key={nav.label} onClick={() => scrollToModalSection(nav.ref)} className="px-4 py-2 bg-white rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest transition-all hover:shadow-sm flex items-center space-x-2 border border-slate-100 active:scale-95"><i className={`fas ${nav.icon} ${nav.color}`}></i><span>{nav.label}</span></button>
+                  <button key={nav.label} type="button" onClick={() => scrollToModalSection(nav.ref)} className="px-4 py-2 bg-white rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest transition-all hover:shadow-sm flex items-center space-x-2 border border-slate-100 active:scale-95"><i className={`fas ${nav.icon} ${nav.color}`}></i><span>{nav.label}</span></button>
                 ))}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-10 pt-0 scrollbar-hide">
-              <form onSubmit={handleSubmit} className="space-y-12">
+              <div className="space-y-12">
                 <div ref={clientRef} className="space-y-6 pt-6">
                   <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 mb-6 flex items-center space-x-4">
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-user text-blue-600"></i></div>
                     <h4 className="text-lg font-black text-blue-900 uppercase tracking-widest">Client Information</h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Name *</label><input required type="text" value={formData.leadName} onChange={e => setFormData({...formData, leadName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Full Name" /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Phone *</label><input required type="tel" value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Email *</label><input required type="email" value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="email@example.com" /></div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Name *</label>
+                      <input 
+                        required 
+                        type="text" 
+                        value={formData.leadName} 
+                        onChange={e => setFormData({...formData, leadName: e.target.value})} 
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:bg-white transition-all" 
+                        placeholder="Full Name" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Phone *</label>
+                      <input 
+                        required 
+                        type="tel" 
+                        value={formData.clientPhone} 
+                        onChange={e => setFormData({...formData, clientPhone: formatPhone(e.target.value)})} 
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:bg-white transition-all" 
+                        placeholder="(555) 000-0000" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Client Email *</label>
+                      <input 
+                        required 
+                        type="email" 
+                        value={formData.clientEmail} 
+                        onChange={e => setFormData({...formData, clientEmail: e.target.value})} 
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:bg-white transition-all" 
+                        placeholder="email@example.com" 
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Property Address</label><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="123 Main St..." /></div>
                   <div className="grid grid-cols-2 gap-6">
@@ -803,9 +799,51 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                     <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Commission (%)</label><input type="number" step="0.01" value={formData.commissionPercentage} onChange={e => setFormData({...formData, commissionPercentage: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-black text-lg outline-none" placeholder="2.5" /></div>
                   </div>
                 </div>
-                <div ref={escrowRef} className="space-y-6"><div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-file-contract text-amber-600"></i></div><h4 className="text-lg font-black text-amber-900 uppercase tracking-widest">Escrow Information</h4></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escrow Company</label><input type="text" value={formData.escrowCompany} onChange={e => setFormData({...formData, escrowCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold text-sm outline-none" placeholder="Company Name" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escrow Officer</label><input type="text" value={formData.escrowOfficer} onChange={e => setFormData({...formData, escrowOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold text-sm outline-none" placeholder="Officer Name" /></div></div></div>
-                <div ref={lenderRef} className="space-y-6"><div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-hand-holding-dollar text-emerald-600"></i></div><h4 className="text-lg font-black text-emerald-900 uppercase tracking-widest">Lender Information</h4></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lender Company</label><input type="text" value={formData.lenderCompany} onChange={e => setFormData({...formData, lenderCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Lender Company" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loan Officer</label><input type="text" value={formData.lenderLoanOfficer} onChange={e => setFormData({...formData, lenderLoanOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Officer Name" /></div></div></div>
-                <div ref={titleRef} className="space-y-6"><div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-building-circle-check text-indigo-600"></i></div><h4 className="text-lg font-black text-indigo-900 uppercase tracking-widest">Title Company Information</h4></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Title Company Name</label><input type="text" value={formData.titleCompany} onChange={e => setFormData({...formData, titleCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Title Company" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Title Officer</label><input type="text" value={formData.titleOfficer} onChange={e => setFormData({...formData, titleOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Officer Name" /></div></div></div>
+                
+                {/* ESCROW SECTION */}
+                <div ref={escrowRef} className="space-y-6">
+                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 mb-6 flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-file-contract text-amber-600"></i></div>
+                    <h4 className="text-lg font-black text-amber-900 uppercase tracking-widest">Escrow Information</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow Company</label><input type="text" value={formData.escrowCompany} onChange={e => setFormData({...formData, escrowCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Company Name" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow Officer</label><input type="text" value={formData.escrowOfficer} onChange={e => setFormData({...formData, escrowOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Officer Name" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow Phone</label><input type="tel" value={formData.escrowPhone} onChange={e => setFormData({...formData, escrowPhone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow Email</label><input type="email" value={formData.escrowEmail} onChange={e => setFormData({...formData, escrowEmail: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="escrow@example.com" /></div>
+                    <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow Address</label><input type="text" value={formData.escrowAddress} onChange={e => setFormData({...formData, escrowAddress: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Escrow Office Address" /></div>
+                    <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Escrow File #</label><input type="text" value={formData.escrowFileNumber} onChange={e => setFormData({...formData, escrowFileNumber: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-black outline-none" placeholder="File Identifier" /></div>
+                  </div>
+                </div>
+
+                {/* LENDER SECTION */}
+                <div ref={lenderRef} className="space-y-6">
+                  <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100 mb-6 flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-hand-holding-dollar text-emerald-600"></i></div>
+                    <h4 className="text-lg font-black text-emerald-900 uppercase tracking-widest">Lender Information</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lender Company</label><input type="text" value={formData.lenderCompany} onChange={e => setFormData({...formData, lenderCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Lender Company" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Loan Officer</label><input type="text" value={formData.lenderLoanOfficer} onChange={e => setFormData({...formData, lenderLoanOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Officer Name" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lender Phone</label><input type="tel" value={formData.lenderPhone} onChange={e => setFormData({...formData, lenderPhone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lender Email</label><input type="email" value={formData.lenderEmail} onChange={e => setFormData({...formData, lenderEmail: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="lender@example.com" /></div>
+                  </div>
+                </div>
+
+                {/* TITLE SECTION */}
+                <div ref={titleRef} className="space-y-6">
+                  <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 mb-6 flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-building-circle-check text-indigo-600"></i></div>
+                    <h4 className="text-lg font-black text-indigo-900 uppercase tracking-widest">Title Company Information</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Title Company Name</label><input type="text" value={formData.titleCompany} onChange={e => setFormData({...formData, titleCompany: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Title Company" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Title Officer</label><input type="text" value={formData.titleOfficer} onChange={e => setFormData({...formData, titleOfficer: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="Officer Name" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Title Phone</label><input type="tel" value={formData.titlePhone} onChange={e => setFormData({...formData, titlePhone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Title Email</label><input type="email" value={formData.titleEmail} onChange={e => setFormData({...formData, titleEmail: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="title@example.com" /></div>
+                  </div>
+                </div>
+
                 <div ref={tcRef} className="space-y-6"><div className="bg-rose-50/50 p-5 rounded-2xl border border-rose-100 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-users-gear text-rose-600"></i></div><h4 className="text-lg font-black text-rose-900 uppercase tracking-widest">Transaction Coordinator</h4></div><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">TC Name</label><input type="text" value={formData.tcName} onChange={e => setFormData({...formData, tcName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="TC Name" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">TC Phone</label><input type="tel" value={formData.tcPhone} onChange={e => setFormData({...formData, tcPhone: formatPhone(e.target.value)})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="(555) 000-0000" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">TC Email</label><input type="email" value={formData.tcEmail} onChange={e => setFormData({...formData, tcEmail: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none" placeholder="email@example.com" /></div></div></div>
                 <div ref={timelineRef} className="space-y-6"><div className="bg-purple-50/50 p-5 rounded-2xl border border-purple-100 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-clock-rotate-left text-purple-600"></i></div><h4 className="text-lg font-black text-purple-900 uppercase tracking-widest">Transaction Timeline</h4></div><div className="grid grid-cols-1 md:grid-cols-4 gap-6"><div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase ml-1">Est. Closing</label><input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full bg-white border border-purple-200 rounded-xl px-6 py-4 font-black" /></div><div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase ml-1">Inspection Due</label><input type="date" value={formData.inspectionDueDate} onChange={e => setFormData({...formData, inspectionDueDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 font-black" /></div><div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase ml-1">Appraisal Due</label><input type="date" value={formData.appraisalDueDate} onChange={e => setFormData({...formData, appraisalDueDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 font-black" /></div><div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase ml-1">Loan Due</label><input type="date" value={formData.loanDueDate} onChange={e => setFormData({...formData, loanDueDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 font-black" /></div></div></div>
                 <div ref={notesRef} className="space-y-6 pt-6"><div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-6 flex items-center space-x-4"><div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm"><i className="fas fa-note-sticky text-slate-600"></i></div><h4 className="text-lg font-black text-slate-900 uppercase tracking-widest">Transaction History & Notes</h4></div><div className="space-y-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-inner"><div className="flex space-x-4"><textarea value={pendingNote} onChange={e => setPendingNote(e.target.value)} placeholder="Log a milestone or internal update..." className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-5 font-bold text-base outline-none min-h-[100px] focus:bg-white" /><button type="button" onClick={handleAddNote} className="px-8 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-[100px] shadow-lg">Add Note</button></div><div className="space-y-3 mt-6">{formData.dealNotes.map(note => (<div key={note.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-start animate-in fade-in slide-in-from-top-1"><div className="space-y-1"><p className="text-base font-semibold text-slate-700">{note.content}</p><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(note.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p></div><button type="button" onClick={() => { const filtered = formData.dealNotes.filter(n => n.id !== note.id); setFormData({...formData, dealNotes: filtered}); if (editingDealId) onUpdateDeal(editingDealId, { dealNotes: filtered }); }} className="text-slate-300 hover:text-rose-500 transition-colors"><i className="fas fa-times-circle"></i></button></div>))}</div></div></div>
@@ -816,9 +854,9 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                     <button type="button" onClick={() => scrollToModalSection(clientRef)} className="flex items-center space-x-3 px-8 py-5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl active:scale-95"><i className="fas fa-arrow-up"></i><span>Back to Top</span></button>
                   </div>
                 </div>
-              </form>
+              </div>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

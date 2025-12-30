@@ -41,9 +41,11 @@ const Layout: React.FC<LayoutProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isAgentSwitcherOpen, setIsAgentSwitcherOpen] = useState(false);
   
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const agentSwitcherRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -53,10 +55,16 @@ const Layout: React.FC<LayoutProps> = ({
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setIsNotificationOpen(false);
       }
+      if (agentSwitcherRef.current && !agentSwitcherRef.current.contains(event.target as Node)) {
+        setIsAgentSwitcherOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const adminUser = users.find(u => u.role === UserRole.BROKER);
+  const otherAgents = users.filter(u => u.id !== user.id);
 
   return (
     <div className={`flex h-screen overflow-hidden text-[12px] ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
@@ -77,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
 
-        {/* Compact View Toggle Switch - Moved to top */}
+        {/* Compact View Toggle Switch */}
         <div className="px-4 mb-4">
            <div 
              className={`flex items-center group cursor-pointer hover:bg-slate-800/50 p-3 rounded-xl transition-all ${isCollapsed ? 'justify-center' : 'justify-between bg-slate-800/30 border border-slate-800'}`}
@@ -110,13 +118,65 @@ const Layout: React.FC<LayoutProps> = ({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
-           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-4 px-2'}`}>
-              <img src={user.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-slate-700" />
+        {/* User Switching Area (Taskbar bottom left) */}
+        <div className="p-4 space-y-3 bg-slate-950/30">
+           <div className="flex flex-col space-y-2">
+              {/* Admin Switcher - light green in admin view, light red in agent view */}
+              <button 
+                onClick={() => adminUser && onSwitchUser(adminUser.id)}
+                className={`flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-indigo-600 hover:text-white group ${isCollapsed ? 'justify-center' : ''} ${
+                  user.role === UserRole.BROKER 
+                    ? 'bg-emerald-500/20 text-emerald-400' 
+                    : 'bg-rose-500/20 text-rose-400'
+                }`}
+                title="Switch to Broker/Admin Screen"
+              >
+                <i className="fas fa-user-shield text-base"></i>
+                {!isCollapsed && <span className="font-black uppercase text-[10px] tracking-widest">Broker/Admin</span>}
+              </button>
+
+              {/* Agent Switcher - light green when an agent is active */}
+              <div className="relative" ref={agentSwitcherRef}>
+                <button 
+                  onClick={() => setIsAgentSwitcherOpen(!isAgentSwitcherOpen)}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-slate-800 group ${isCollapsed ? 'justify-center' : ''} ${
+                    (user.role === UserRole.AGENT || isAgentSwitcherOpen)
+                      ? 'bg-emerald-500/20 text-emerald-400' 
+                      : 'text-slate-500'
+                  }`}
+                  title="Switch Between Agents"
+                >
+                  <i className="fas fa-users-between-lines text-base"></i>
+                  {!isCollapsed && <span className="font-black uppercase text-[10px] tracking-widest">Switch Agent</span>}
+                </button>
+
+                {isAgentSwitcherOpen && (
+                  <div className={`absolute bottom-full left-0 mb-2 w-64 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden py-2 z-50 animate-in slide-in-from-bottom-2 duration-200`}>
+                    <p className="px-4 py-2 text-[8px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-700/50 mb-1">Select Active Agent</p>
+                    {otherAgents.map(agent => (
+                      <button 
+                        key={agent.id}
+                        onClick={() => { onSwitchUser(agent.id); setIsAgentSwitcherOpen(false); }}
+                        className="w-full text-left px-4 py-3 hover:bg-slate-700 flex items-center space-x-3 transition-colors"
+                      >
+                        <img src={agent.avatar} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-bold text-white truncate">{agent.firstName} {agent.lastName}</p>
+                          <p className="text-[9px] text-slate-400 uppercase">{agent.role}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+           </div>
+
+           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-4 px-2'} pt-3 border-t border-slate-800`}>
+              <img src={user.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-indigo-600" />
               {!isCollapsed && (
                 <div className="flex-1 overflow-hidden">
-                  <p className="font-bold text-white truncate">{user.firstName} {user.lastName}</p>
-                  <p className="text-[10px] text-slate-500 uppercase">{user.role}</p>
+                  <p className="font-bold text-white truncate leading-none">{user.firstName} {user.lastName}</p>
+                  <p className="text-[9px] text-slate-500 uppercase mt-1 tracking-widest font-black">{user.role}</p>
                 </div>
               )}
            </div>
@@ -190,14 +250,46 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="relative" ref={profileDropdownRef}>
               <button 
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className={`flex items-center space-x-3 p-1.5 pr-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}
+                className={`flex items-center space-x-3 p-1.5 pr-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'} ${isProfileDropdownOpen ? 'ring-2 ring-indigo-500' : ''}`}
               >
                 <img src={user.avatar} alt="avatar" className="w-9 h-9 rounded-xl object-cover shadow-sm" />
                 <div className="hidden lg:block text-left">
                    <p className={`text-xs font-black leading-none ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{user.firstName}</p>
                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">{user.role}</p>
                 </div>
+                <i className={`fas fa-chevron-down text-[8px] text-slate-400 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`}></i>
               </button>
+
+              {isProfileDropdownOpen && (
+                <div className={`absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-3xl shadow-2xl z-50 overflow-hidden py-3 animate-in fade-in slide-in-from-top-3 duration-200 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
+                  <div className="px-6 py-3 border-b border-slate-50 mb-2">
+                    <p className={`text-xs font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{user.firstName} {user.lastName}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{user.email}</p>
+                  </div>
+                  <button 
+                    onClick={() => { setView('profile'); setIsProfileDropdownOpen(false); }}
+                    className={`w-full text-left px-6 py-3 flex items-center space-x-4 hover:bg-indigo-50 transition-colors group ${isDarkMode ? 'hover:bg-slate-700 text-slate-300' : 'text-slate-700'}`}
+                  >
+                    <i className="fas fa-id-card text-slate-400 group-hover:text-indigo-600"></i>
+                    <span className="text-xs font-black uppercase tracking-widest">Profile Setting</span>
+                  </button>
+                  <button 
+                    onClick={() => { setView('settings'); setIsProfileDropdownOpen(false); }}
+                    className={`w-full text-left px-6 py-3 flex items-center space-x-4 hover:bg-indigo-50 transition-colors group ${isDarkMode ? 'hover:bg-slate-700 text-slate-300' : 'text-slate-700'}`}
+                  >
+                    <i className="fas fa-cog text-slate-400 group-hover:text-indigo-600"></i>
+                    <span className="text-xs font-black uppercase tracking-widest">Account Setting</span>
+                  </button>
+                  <div className="h-px bg-slate-50 my-2 mx-4"></div>
+                  <button 
+                    onClick={() => { onLogout(); setIsProfileDropdownOpen(false); }}
+                    className="w-full text-left px-6 py-3 flex items-center space-x-4 hover:bg-rose-50 text-rose-500 transition-colors group"
+                  >
+                    <i className="fas fa-sign-out-alt"></i>
+                    <span className="text-xs font-black uppercase tracking-widest">Sign Out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

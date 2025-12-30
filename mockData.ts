@@ -16,7 +16,7 @@ export const MOCK_AGENTS: User[] = [
     phone: '(555) 123-4567',
     role: UserRole.AGENT,
     avatar: 'https://picsum.photos/seed/agent1/200',
-    licenseNumber: 'DRE# 02154882'
+    licenseNumber: 'DRE Lic# 02154882'
   },
   {
     id: 'agent_2',
@@ -27,20 +27,20 @@ export const MOCK_AGENTS: User[] = [
     phone: '(555) 987-6543',
     role: UserRole.AGENT,
     avatar: 'https://picsum.photos/seed/agent2/200',
-    licenseNumber: 'DRE# 01984223'
+    licenseNumber: 'DRE Lic# 01984223'
   }
 ];
 
 export const MOCK_BROKER: User = {
   id: 'broker_1',
   brokerageId: 'brk_7721',
-  firstName: 'Alexander',
-  lastName: 'Pierce',
-  email: 'alex@empire.com',
+  firstName: 'Josephine',
+  lastName: 'Sharma',
+  email: 'JSharmREO@yahoo.com',
   phone: '(555) 444-5555',
   role: UserRole.BROKER,
   avatar: 'https://picsum.photos/seed/broker1/200',
-  licenseNumber: 'DRE# 00871234'
+  licenseNumber: 'DRE Lic #01507253'
 };
 
 const getRandomDate = (start: Date, end: Date) => {
