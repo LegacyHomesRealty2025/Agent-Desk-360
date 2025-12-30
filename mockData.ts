@@ -1,5 +1,4 @@
-
-import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse } from './types';
+import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse, EmailMessage } from './types';
 
 export const MOCK_BROKERAGE: Brokerage = {
   id: 'brk_7721',
@@ -139,6 +138,32 @@ export const MOCK_TASKS: Task[] = MOCK_LEADS.map((lead, i) => {
     priority: i % 2 === 0 ? 'HIGH' : 'MEDIUM'
   };
 });
+
+export const MOCK_EMAILS: EmailMessage[] = [
+  {
+    id: 'em_1',
+    sender: 'Liam Smith',
+    senderEmail: 'liam.smith@example.com',
+    recipientEmail: 'alex@empire.com',
+    subject: 'Question about the Oak St property',
+    body: 'Hi Alexander,\n\nI was looking at the 123 Oak St listing and was wondering if the kitchen appliances are included in the sale?\n\nBest,\nLiam',
+    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    isRead: false,
+    isStarred: true,
+    folder: 'INBOX'
+  },
+  {
+    id: 'em_2',
+    sender: 'Escrow Officer',
+    senderEmail: 'officer@titletrust.com',
+    recipientEmail: 'alex@empire.com',
+    subject: 'Closing docs for Williams',
+    body: 'Alexander,\n\nThe signing for the Williams transaction has been scheduled for Friday at 2 PM. Please ensure the clients are aware.\n\nThanks,\nEscrow Dept.',
+    timestamp: new Date(Date.now() - 7200000).toISOString(),
+    isRead: true,
+    folder: 'INBOX'
+  }
+];
 
 export const MOCK_OPEN_HOUSES: OpenHouse[] = [
   {

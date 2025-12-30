@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse } from './types';
-import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES } from './mockData';
+import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage } from './types';
+import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS } from './mockData';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import LeadList from './components/LeadList';
@@ -19,6 +19,7 @@ import ProfileView from './components/ProfileView';
 import MarketingView from './components/MarketingView';
 import LoginView from './components/LoginView';
 import JoinView from './components/JoinView';
+import EmailDashboard from './components/EmailDashboard';
 import { leadIngestionService } from './services/leadIngestionService';
 
 const DEFAULT_SOURCES = [
@@ -35,14 +36,15 @@ const DEFAULT_TAGS = [
 const TZ = 'America/Los_Angeles';
 
 // LocalStorage Keys & Versioning
-const DATA_VERSION = '1.0.2'; // Incrementing this forces a local storage reset
+const DATA_VERSION = '1.0.3'; // Incrementing for Email integration
 const STORAGE_KEYS = {
   VERSION: 'af_crm_version',
   LEADS: 'af_crm_leads',
   TASKS: 'af_crm_tasks',
   DEALS: 'af_crm_deals',
   OPEN_HOUSES: 'af_crm_open_houses',
-  USERS: 'af_crm_users'
+  USERS: 'af_crm_users',
+  EMAILS: 'af_crm_emails'
 };
 
 export interface NavItemConfig {
@@ -63,6 +65,7 @@ export interface NotificationItem {
 
 const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
+  { id: 'email', label: 'Email Center', icon: 'fa-envelope' },
   { id: 'leads', label: 'Lead Pipeline', icon: 'fa-users' },
   { id: 'contacts', label: 'Contacts', icon: 'fa-address-book' },
   { id: 'marketing', label: 'Marketing Hub', icon: 'fa-wand-magic-sparkles' },
@@ -106,7 +109,6 @@ const App: React.FC = () => {
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   
   // Data State with Persistence (Simulated Backend)
-  // Logic: If version mismatch, force reset to the requested 5-item mock data
   const [users, setUsers] = useState<User[]>(() => {
     const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
@@ -142,6 +144,13 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : MOCK_OPEN_HOUSES;
   });
 
+  const [emails, setEmails] = useState<EmailMessage[]>(() => {
+    const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
+    const saved = localStorage.getItem(STORAGE_KEYS.EMAILS);
+    if (savedVersion !== DATA_VERSION) return MOCK_EMAILS;
+    return saved ? JSON.parse(saved) : MOCK_EMAILS;
+  });
+
   // Persist State to LocalStorage (The "Database")
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
@@ -150,7 +159,8 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
     localStorage.setItem(STORAGE_KEYS.DEALS, JSON.stringify(deals));
     localStorage.setItem(STORAGE_KEYS.OPEN_HOUSES, JSON.stringify(openHouses));
-  }, [users, leads, tasks, deals, openHouses]);
+    localStorage.setItem(STORAGE_KEYS.EMAILS, JSON.stringify(emails));
+  }, [users, leads, tasks, deals, openHouses, emails]);
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     return users.find(u => u.role === UserRole.BROKER) || users[0];
@@ -269,6 +279,10 @@ const App: React.FC = () => {
     ? openHouses
     : openHouses.filter(oh => oh.assignedAgentId === currentUser?.id)).filter(oh => !oh.isDeleted), [openHouses, currentUser]);
 
+  const accessibleEmails = useMemo(() => 
+    emails.filter(e => e.recipientEmail === currentUser?.email || e.senderEmail === currentUser?.email),
+  [emails, currentUser]);
+
   const handlePublicCheckIn = (newLead: Lead, newTask: Task) => {
     setLeads(prev => {
       const existingIndex = prev.findIndex(l => l.email.toLowerCase() === newLead.email.toLowerCase() || l.phone === newLead.phone);
@@ -343,11 +357,24 @@ const App: React.FC = () => {
     });
   };
 
+  const handleSendEmail = (email: EmailMessage) => {
+    setEmails(prev => [email, ...prev]);
+  };
+
+  const handleUpdateEmail = (id: string, updates: Partial<EmailMessage>) => {
+    setEmails(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  };
+
+  const handleDeleteEmail = (id: string) => {
+    setEmails(prev => prev.map(e => e.id === id ? { ...e, folder: 'TRASH' as const } : e));
+  };
+
   const renderContent = () => {
     if (!currentUser || !brokerage) return <div>Loading...</div>;
 
     switch (view) {
       case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
+      case 'email': return <EmailDashboard emails={accessibleEmails} currentUser={currentUser} onSendEmail={handleSendEmail} onUpdateEmail={handleUpdateEmail} onDeleteEmail={handleDeleteEmail} isDarkMode={isDarkMode} />;
       case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
       case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...newLeads, ...prev])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;
       case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...newLeads, ...prev])} availableSources={DEFAULT_SOURCES} availableTags={DEFAULT_TAGS} onUpdateSources={() => {}} onUpdateTags={() => {}} />;

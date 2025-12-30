@@ -150,10 +150,10 @@ const Layout: React.FC<LayoutProps> = ({
                <span>Contacts</span>
              </button>
              <button 
-               onClick={() => setView('marketing')} 
-               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 group ${currentView === 'marketing' ? (isDarkMode ? 'bg-slate-900 text-pink-400' : 'bg-white shadow-sm text-pink-600') : 'text-slate-500 hover:text-slate-700'}`}
+               onClick={() => setView('email')} 
+               className={`px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center space-x-2 group ${currentView === 'email' ? (isDarkMode ? 'bg-slate-900 text-pink-400' : 'bg-white shadow-sm text-pink-600') : 'text-slate-500 hover:text-slate-700'}`}
              >
-               <i className={`fas fa-envelope text-[11px] ${currentView === 'marketing' ? 'text-pink-500' : 'text-pink-400 group-hover:text-pink-500'}`}></i>
+               <i className={`fas fa-envelope text-[11px] ${currentView === 'email' ? 'text-pink-500' : 'text-pink-400 group-hover:text-pink-500'}`}></i>
                <span>Email</span>
              </button>
              <button 

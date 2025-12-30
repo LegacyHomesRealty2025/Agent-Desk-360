@@ -175,6 +175,22 @@ export interface OpenHouse {
   deletedAt?: string;
 }
 
+export type EmailFolder = 'INBOX' | 'SENT' | 'DRAFTS' | 'TRASH' | 'ARCHIVE';
+
+export interface EmailMessage {
+  id: string;
+  sender: string;
+  senderEmail: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+  timestamp: string;
+  isRead: boolean;
+  isStarred?: boolean;
+  folder: EmailFolder;
+  attachments?: string[];
+}
+
 /** Marketing Hub Types **/
 
 export type MarketingAssetType = 'IMAGE' | 'VIDEO' | 'PDF' | 'LINK';
