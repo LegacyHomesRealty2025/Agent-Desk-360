@@ -21,6 +21,8 @@ interface LayoutProps {
   onUpdateNavItems: (items: NavItemConfig[]) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  dashboardFilterId?: string; // Prop to sync UI colors with performance filters
+  onSetDashboardFilterId?: (id: string) => void; // Setter to reset filters
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -36,7 +38,9 @@ const Layout: React.FC<LayoutProps> = ({
   navItems,
   onUpdateNavItems,
   isDarkMode,
-  toggleDarkMode
+  toggleDarkMode,
+  dashboardFilterId,
+  onSetDashboardFilterId
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -65,6 +69,37 @@ const Layout: React.FC<LayoutProps> = ({
 
   const adminUser = users.find(u => u.role === UserRole.BROKER);
   const otherAgents = users.filter(u => u.id !== user.id);
+
+  // DETERMINE FILTER CONTEXT
+  // Check if a Broker is currently viewing a specific agent's performance in the dashboard
+  const isViewingAsAgent = user.role === UserRole.BROKER && dashboardFilterId && dashboardFilterId !== 'TEAM' && dashboardFilterId !== user.id;
+
+  // COLOR LOGIC FOR BOTTOM BUTTONS
+  // Broker/Admin button: Emerald when viewing Team (Default), Rose when viewing specific Agent (Alerting/Different)
+  const brokerAdminButtonClass = (user.role === UserRole.BROKER && !isViewingAsAgent)
+    ? 'bg-emerald-500/20 text-emerald-400' 
+    : 'bg-rose-500/20 text-rose-400';
+
+  // Switch Agent button: Emerald when focused on an agent (via Filter or via session) or when dropdown is open
+  const switchAgentButtonClass = (user.role === UserRole.AGENT || isViewingAsAgent || isAgentSwitcherOpen)
+    ? 'bg-emerald-500/20 text-emerald-400' 
+    : 'text-slate-500 hover:text-slate-300';
+
+  const handleBrokerAdminClick = () => {
+    if (user.role === UserRole.BROKER) {
+      if (isViewingAsAgent) {
+        // If we are a broker but viewing an agent's stats, reset the filter to TEAM
+        if (onSetDashboardFilterId) onSetDashboardFilterId('TEAM');
+        setView('dashboard');
+      } else {
+        // Already in full view mode, just ensure we go to dashboard
+        setView('dashboard');
+      }
+    } else if (adminUser) {
+      // If we are currently logged in as an AGENT, switch the session back to the BROKER
+      onSwitchUser(adminUser.id);
+    }
+  };
 
   return (
     <div className={`flex h-screen overflow-hidden text-[12px] ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
@@ -138,13 +173,9 @@ const Layout: React.FC<LayoutProps> = ({
         <div className="p-4 space-y-3 bg-slate-950/30">
            <div className="flex flex-col space-y-2">
               <button 
-                onClick={() => adminUser && onSwitchUser(adminUser.id)}
-                className={`flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-indigo-600 hover:text-white group ${isCollapsed ? 'justify-center' : ''} ${
-                  user.role === UserRole.BROKER 
-                    ? 'bg-emerald-500/20 text-emerald-400' 
-                    : 'bg-rose-500/20 text-rose-400'
-                }`}
-                title="Switch to Broker/Admin Screen"
+                onClick={handleBrokerAdminClick}
+                className={`flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-indigo-600 hover:text-white group ${isCollapsed ? 'justify-center' : ''} ${brokerAdminButtonClass}`}
+                title={isViewingAsAgent ? "Switch back to Broker/Admin View" : "Switch to Broker/Admin Screen"}
               >
                 <i className="fas fa-user-shield text-base"></i>
                 {!isCollapsed && <span className="font-black uppercase text-[10px] tracking-widest">Broker/Admin</span>}
@@ -153,11 +184,7 @@ const Layout: React.FC<LayoutProps> = ({
               <div className="relative" ref={agentSwitcherRef}>
                 <button 
                   onClick={() => setIsAgentSwitcherOpen(!isAgentSwitcherOpen)}
-                  className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-slate-800 group ${isCollapsed ? 'justify-center' : ''} ${
-                    (user.role === UserRole.AGENT || isAgentSwitcherOpen)
-                      ? 'bg-emerald-500/20 text-emerald-400' 
-                      : 'text-slate-500'
-                  }`}
+                  className={`w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:bg-slate-800 group ${isCollapsed ? 'justify-center' : ''} ${switchAgentButtonClass}`}
                   title="Switch Between Agents"
                 >
                   <i className="fas fa-users-between-lines text-base"></i>

@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, User, Deal, UserRole, OpenHouse, Task } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
@@ -14,14 +13,27 @@ interface DashboardProps {
   onInviteUser?: (email: string, role: UserRole) => string;
   isDarkMode?: boolean;
   toggleDarkMode?: () => void;
+  viewingAgentId: string;
+  onSetViewingAgentId: (id: string) => void;
 }
 
 const TZ = 'America/Los_Angeles';
 const COLORS = ['#6366f1', '#4ade80', '#fbbf24', '#f87171', '#a78bfa'];
 
-const Dashboard: React.FC<DashboardProps> = ({ leads, user, agents, deals, tasks, openHouses, onNavigate, onInviteUser, isDarkMode, toggleDarkMode }) => {
-  // Sync viewingAgentId with the user prop when it changes. 
-  const [viewingAgentId, setViewingAgentId] = useState<string>(user.role === UserRole.BROKER ? 'TEAM' : user.id);
+const Dashboard: React.FC<DashboardProps> = ({ 
+  leads, 
+  user, 
+  agents, 
+  deals, 
+  tasks, 
+  openHouses, 
+  onNavigate, 
+  onInviteUser, 
+  isDarkMode, 
+  toggleDarkMode,
+  viewingAgentId,
+  onSetViewingAgentId
+}) => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   // Invite Modal State
@@ -29,11 +41,6 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, user, agents, deals, tasks
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.AGENT);
   const [generatedInviteLink, setGeneratedInviteLink] = useState('');
-
-  useEffect(() => {
-    // When the primary session user changes (e.g. from Sidebar), update the dashboard filter
-    setViewingAgentId(user.role === UserRole.BROKER ? 'TEAM' : user.id);
-  }, [user.id, user.role]);
 
   // Filter data based on selected agent
   const dashboardDeals = useMemo(() => {
@@ -210,7 +217,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, user, agents, deals, tasks
                   <div className="fixed inset-0 z-40" onClick={() => setIsSwitcherOpen(false)}></div>
                   <div className={`absolute right-0 mt-3 w-72 border rounded-2xl shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                     <button 
-                      onClick={() => { setViewingAgentId('TEAM'); setIsSwitcherOpen(false); }}
+                      onClick={() => { onSetViewingAgentId('TEAM'); setIsSwitcherOpen(false); }}
                       className={`w-full text-left px-5 py-4 hover:bg-slate-50 flex items-center space-x-4 transition-colors ${viewingAgentId === 'TEAM' ? 'bg-indigo-50 border-r-4 border-indigo-600' : ''} ${isDarkMode ? 'text-white hover:bg-slate-700' : 'text-slate-800'}`}
                     >
                       <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-sm">
@@ -226,7 +233,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, user, agents, deals, tasks
                       {agents.map(agent => (
                         <button 
                           key={agent.id}
-                          onClick={() => { setViewingAgentId(agent.id); setIsSwitcherOpen(false); }}
+                          onClick={() => { onSetViewingAgentId(agent.id); setIsSwitcherOpen(false); }}
                           className={`w-full text-left px-5 py-3 flex items-center space-x-4 transition-colors ${viewingAgentId === agent.id ? 'bg-indigo-50 border-r-4 border-indigo-500' : ''} ${isDarkMode ? 'text-slate-200 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}
                         >
                           <img src={agent.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-100" alt="" />
