@@ -213,7 +213,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
           {isAdmin && (
             <div className="flex items-center space-x-3">
               <button onClick={() => { setInviteEmail(''); setGeneratedInviteLink(''); setIsInviteModalOpen(true); }} className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all flex items-center space-x-3 shrink-0"><i className="fas fa-paper-plane"></i><span>Invite Agent</span></button>
-              <button onClick={handleOpenCreate} className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all flex items-center space-x-3 shrink-0"><i className="fas fa-plus"></i><span>Add Agent</span></button>
+              <button onClick={handleOpenCreate} className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center space-x-3 shrink-0"><i className="fas fa-plus"></i><span>Add Agent</span></button>
             </div>
           )}
         </div>
@@ -330,6 +330,28 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {userToTrash && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setUserToTrash(null)}></div>
+          <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-200 w-full max-w-md p-8 relative z-10 animate-in zoom-in-95 duration-200 text-[14px]">
+            <div className="flex items-center space-x-4 mb-6 text-rose-600">
+              <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">
+                <i className="fas fa-trash-can"></i>
+              </div>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">Trash Member?</h3>
+            </div>
+            <p className="text-slate-600 mb-8 text-base font-semibold leading-relaxed">
+              Are you sure you want to remove <span className="text-slate-900 font-black">{userToTrash.firstName} {userToTrash.lastName}</span>? This item will be moved to the trash bin.
+            </p>
+            <div className="flex space-x-4">
+              <button onClick={() => setUserToTrash(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all !text-[11px]">Cancel</button>
+              <button onClick={executeTrash} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all !text-[11px]">Move to Trash</button>
+            </div>
+          </div>
         </div>
       )}
 
