@@ -224,6 +224,27 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     spouseEmail: 'bobv@vancerefrig.com',
     spousePhone: '(555) 888-9999',
     secondaryContactRelationship: 'Partner'
+  },
+  {
+    id: 'lead_today_milestone',
+    brokerageId: 'brk_7721',
+    assignedAgentId: 'agent_1',
+    firstName: 'Today',
+    lastName: 'Event',
+    email: 'today.event@example.com',
+    phone: '(555) 888-7777',
+    status: LeadStatus.ACTIVE,
+    temperature: LeadTemperature.HOT,
+    source: 'Direct',
+    tags: ['VIP'],
+    propertyType: 'PRIMARY',
+    propertyAddress: '777 Milestone Way, Scranton, PA',
+    budget: 2000000,
+    notes: [],
+    createdAt: new Date('2025-12-01').toISOString(),
+    updatedAt: new Date().toISOString(),
+    estimatedDealValue: 60000,
+    dob: '1985-12-28T12:00:00.000Z', // Birthday Today!
   }
 ];
 
@@ -416,6 +437,18 @@ export const MOCK_TASKS: Task[] = MOCK_LEADS.map((lead, i) => {
     isCompleted: false,
     priority: i % 2 === 0 ? 'HIGH' : 'MEDIUM'
   };
+});
+
+// Adding a task specifically for "today" to trigger the Task notification dot
+MOCK_TASKS.push({
+  id: 'task_today_urgent',
+  brokerageId: 'brk_7721',
+  assignedUserId: 'broker_1',
+  title: 'Urgent Pipeline Audit',
+  description: 'Complete review of all pending transactions for year-end closing.',
+  dueDate: '2025-12-28T14:00:00.000Z',
+  isCompleted: false,
+  priority: 'HIGH'
 });
 
 export const MOCK_EMAILS: EmailMessage[] = [

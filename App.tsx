@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata, YearlyGoal } from './types.ts';
 import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS, MOCK_GOALS } from './mockData.ts';
@@ -17,7 +16,6 @@ import OpenHouseView from './components/OpenHouseView.tsx';
 import OpenHousePublicForm from './components/OpenHousePublicForm.tsx';
 import TeamView from './components/TeamView.tsx';
 import ProfileView from './components/ProfileView.tsx';
-import MarketingView from './components/MarketingView.tsx';
 import LoginView from './components/LoginView.tsx';
 import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
@@ -76,7 +74,6 @@ const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'email', label: 'Email Center', icon: 'fa-envelope' },
   { id: 'leads', label: 'Lead Pipeline', icon: 'fa-users' },
   { id: 'contacts', label: 'Contacts', icon: 'fa-address-book' },
-  { id: 'marketing', label: 'Marketing Hub', icon: 'fa-wand-magic-sparkles' },
   { id: 'open-house', label: 'Open House', icon: 'fa-door-open' },
   { id: 'pipeline', label: 'Transactions', icon: 'fa-file-invoice-dollar' },
   { id: 'reports', label: 'Reports', icon: 'fa-chart-line' },
@@ -458,9 +455,8 @@ const App: React.FC = () => {
       case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
       case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} />;
       case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} />;
-      case 'marketing': return <MarketingView currentUser={currentUser} brokerage={brokerage} leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} />;
       case 'pipeline': return <PipelineView deals={accessibleDeals} leads={accessibleLeads} onAddDeal={d => setDeals(prev => [...prev, d])} onUpdateDeal={(id, u) => setDeals(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: true, deletedAt: new Date().toISOString()} : d))} availableSources={sources} />;
-      case 'reports': return <ReportsView leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} currentUser={currentUser} />;
+      case 'reports': return <ReportsView leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} currentUser={currentUser} isDarkMode={isDarkMode} />;
       case 'calendar': return <CalendarView leads={accessibleLeads} tasks={accessibleTasks} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} user={currentUser} />;
       case 'lead-detail': return selectedLead ? <LeadDetail lead={selectedLead} user={currentUser} onBack={() => setView('contacts')} onAddNote={(id, c) => { const note: LeadNote = { id: `n_${Date.now()}`, content: c, createdAt: new Date().toISOString(), authorId: currentUser.id, authorName: `${currentUser.firstName} ${currentUser.lastName}` }; setLeads(prev => prev.map(l => l.id === id ? {...l, notes: [note, ...l.notes]} : l)); }} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} availableSources={sources} availableTags={tags} /> : <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'tasks': return <TaskList tasks={accessibleTasks} leads={accessibleLeads} user={currentUser} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} />;

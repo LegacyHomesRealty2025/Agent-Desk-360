@@ -348,7 +348,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="flex items-center space-x-3 text-slate-800 px-2">
           <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
           <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">
-            {viewingAgentId === 'TEAM' ? 'Team Snapshot' : 'Individual Snapshot'}
+            {viewingAgentId === 'TEAM' ? 'Team Snapshot' : 'My Performance'}
           </h2>
         </div>
 
@@ -496,7 +496,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       <section className="space-y-4">
         <div className="flex items-center space-x-3 text-slate-800 px-2">
           <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
-          <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Growth Metrics</h2>
+          <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">
+            {viewingAgentId === 'TEAM' ? 'Team Performance' : 'My Production'}
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">

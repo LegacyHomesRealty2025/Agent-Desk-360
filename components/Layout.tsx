@@ -149,10 +149,10 @@ const Layout: React.FC<LayoutProps> = ({
               >
                 <i className={`fas ${item.icon} ${isCollapsed ? 'text-xl' : 'w-8 text-lg'} ${isActive ? 'text-white' : 'group-hover:text-indigo-400'}`}></i>
                 {!isCollapsed && (
-                  <div className="flex-1 flex items-center justify-between ml-1">
+                  <div className="flex-1 flex items-center ml-1">
                     <span className={`text-left font-black text-sm tracking-tight transition-all ${isActive ? 'translate-x-1' : ''}`}>{item.label}</span>
                     {hasAlert && (
-                      <span className="w-2 h-2 bg-orange-500 rounded-full animate-slow-blink shadow-[0_0_12px_rgba(249,115,22,0.8)] shrink-0"></span>
+                      <span className="w-2 h-2 bg-orange-500 rounded-full animate-slow-blink shadow-[0_0_12px_rgba(249,115,22,0.8)] shrink-0 ml-2"></span>
                     )}
                   </div>
                 )}

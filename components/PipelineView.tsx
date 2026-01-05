@@ -287,13 +287,13 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, dealId: string) => {
+  const handleDragStart = (timeout: React.DragEvent, dealId: string) => {
     if (displayMode === 'list') return;
     setDraggedDealId(dealId);
-    e.dataTransfer.setData('dealId', dealId);
-    e.dataTransfer.effectAllowed = 'move';
+    timeout.dataTransfer.setData('dealId', dealId);
+    timeout.dataTransfer.effectAllowed = 'move';
     setTimeout(() => {
-      (e.target as HTMLElement).classList.add('opacity-40');
+      (timeout.target as HTMLElement).classList.add('opacity-40');
     }, 0);
   };
 
@@ -567,7 +567,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                  <i className="fas fa-triangle-exclamation"></i>
               </div>
               <div>
-                <h3 className="text-rose-900 font-black uppercase tracking-widest text-[11px]">Critical Alerts</h3>
+                <h3 className="text-rose-900 font-black uppercase tracking-widest text-[11px]">Closing Alerts</h3>
                 <p className="text-rose-600 text-[12px] font-medium">{closingSoonDeals.length} transaction(s) closing in less than 5 days.</p>
               </div>
            </div>
