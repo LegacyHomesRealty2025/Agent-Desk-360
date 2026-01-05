@@ -230,6 +230,15 @@ export interface TrashedMetadata {
   deletedAt: string;
 }
 
+// Fix: Added missing YearlyGoal interface exported from types.ts
+export interface YearlyGoal {
+  userId: string;
+  year: number;
+  volumeTarget: number;
+  unitTarget: number;
+  gciTarget: number;
+}
+
 export interface AppState {
   currentUser: User | null;
   brokerage: Brokerage | null;

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Lead, User, Deal, UserRole, OpenHouse, Task } from '../types.ts';
+import React, { useState, useMemo } from 'react';
+import { Lead, User, Deal, UserRole, OpenHouse, Task, LeadStatus } from '../types.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
 interface DashboardProps {
@@ -20,6 +20,43 @@ interface DashboardProps {
 const TZ = 'America/Los_Angeles';
 const COLORS = ['#6366f1', '#4ade80', '#fbbf24', '#f87171', '#a78bfa'];
 
+type ChartView = 'VOLUME' | 'LIST' | 'BUY' | 'UNITS';
+
+// Custom Tooltip for aesthetic data presentation
+const CustomTooltip = ({ active, payload, label, chartView, isDarkMode }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const isCompare = payload.length > 1;
+    
+    const renderData = (val: number, units: number, isPrev = false) => (
+      <div className={`space-y-1 ${isPrev ? 'opacity-60 pt-2 mt-2 border-t border-slate-100 dark:border-slate-800' : ''}`}>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          {isPrev ? 'Previous Year' : 'Current Year'}
+        </p>
+        <div className="flex flex-col">
+          {(chartView === 'VOLUME' || chartView === 'LIST' || chartView === 'BUY') && (
+            <p className="text-sm font-black text-indigo-600">Price: ${val.toLocaleString()}</p>
+          )}
+          {(chartView === 'VOLUME' || chartView === 'UNITS') && (
+            <p className={`text-sm font-black ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+              Units: {units}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+
+    return (
+      <div className={`p-5 rounded-2xl shadow-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+        <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">{label}</p>
+        {renderData(data.curVol, data.curUnits)}
+        {isCompare && renderData(data.preVol, data.preUnits, true)}
+      </div>
+    );
+  }
+  return null;
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ 
   leads, 
   user, 
@@ -35,39 +72,16 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSetViewingAgentId
 }) => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const [chartView, setChartView] = useState<ChartView>('VOLUME');
+  const [compareLastYear, setCompareLastYear] = useState(false);
   
-  // Invite Modal State (RESTORED)
+  // Invite Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.AGENT);
   const [generatedInviteLink, setGeneratedInviteLink] = useState('');
 
-  // Filter data based on selected agent
-  const dashboardDeals = useMemo(() => {
-    if (viewingAgentId === 'TEAM') return deals;
-    return deals.filter(d => d.assignedUserId === viewingAgentId);
-  }, [deals, viewingAgentId]);
-
-  const dashboardLeads = useMemo(() => {
-    if (viewingAgentId === 'TEAM') return leads;
-    return leads.filter(l => l.assignedAgentId === viewingAgentId);
-  }, [leads, viewingAgentId]);
-
-  const dashboardTasks = useMemo(() => {
-    if (viewingAgentId === 'TEAM') return tasks;
-    return tasks.filter(t => t.assignedUserId === viewingAgentId);
-  }, [tasks, viewingAgentId]);
-
-  const dashboardOpenHouses = useMemo(() => {
-    if (viewingAgentId === 'TEAM') return openHouses;
-    return openHouses.filter(oh => oh.assignedAgentId === viewingAgentId);
-  }, [openHouses, viewingAgentId]);
-
-  const selectedAgentData = useMemo(() => 
-    agents.find(a => a.id === viewingAgentId), 
-  [agents, viewingAgentId]);
-
-  // Utility for LA Time parts (RESTORED)
+  // Utility for LA Time parts
   const getLAPart = (date: string | Date, part: 'month' | 'year' | 'day') => {
     const options: any = { timeZone: TZ };
     if (part === 'month') options.month = 'numeric';
@@ -77,16 +91,40 @@ const Dashboard: React.FC<DashboardProps> = ({
     return parseInt(val);
   };
 
+  const laNow = new Date('2025-12-28T09:00:00'); // Consistent with App.tsx mocked time
+  const currentYear = getLAPart(laNow, 'year');
+  const prevYear = currentYear - 1;
+
+  // Filter data based on selected agent
+  const dashboardDeals = useMemo(() => {
+    const activeDeals = deals.filter(d => !d.isDeleted);
+    if (viewingAgentId === 'TEAM') return activeDeals;
+    return activeDeals.filter(d => d.assignedUserId === viewingAgentId);
+  }, [deals, viewingAgentId]);
+
+  const dashboardLeads = useMemo(() => {
+    const activeLeads = leads.filter(l => !l.isDeleted);
+    if (viewingAgentId === 'TEAM') return activeLeads;
+    return activeLeads.filter(l => l.assignedAgentId === viewingAgentId);
+  }, [leads, viewingAgentId]);
+
+  const dashboardTasks = useMemo(() => {
+    if (viewingAgentId === 'TEAM') return tasks;
+    return tasks.filter(t => t.assignedUserId === viewingAgentId);
+  }, [tasks, viewingAgentId]);
+
+  const selectedAgentData = useMemo(() => 
+    agents.find(a => a.id === viewingAgentId), 
+  [agents, viewingAgentId]);
+
+  // Milestone Counts for Today
   const isTodayMonthDay = (dateStr?: string) => {
     if (!dateStr) return false;
-    const laNow = new Date(new Date().toLocaleString('en-US', { timeZone: TZ }));
+    const laNowDate = new Date(laNow.toLocaleString('en-US', { timeZone: TZ }));
     const d = new Date(new Date(dateStr).toLocaleString('en-US', { timeZone: TZ }));
-    return d.getMonth() === laNow.getMonth() && d.getDate() === laNow.getDate();
+    return d.getMonth() === laNowDate.getMonth() && d.getDate() === laNowDate.getDate();
   };
 
-  const currentLAMonthIdx = getLAPart(new Date(), 'month') - 1;
-
-  // Milestone Counts for Today (RESTORED)
   const milestoneCounts = useMemo(() => {
     const todos = dashboardTasks.filter(t => !t.isCompleted).length;
     const birthdays = dashboardLeads.filter(l => isTodayMonthDay(l.dob)).length;
@@ -95,39 +133,92 @@ const Dashboard: React.FC<DashboardProps> = ({
     return { todos, birthdays, weddingAnnivs, homeAnnivs };
   }, [dashboardTasks, dashboardLeads]);
 
-  // Financial Stats Calculation (RESTORED)
-  const closedDeals = dashboardDeals.filter(d => d.status === 'CLOSED');
-  const pendingDeals = dashboardDeals.filter(d => d.status === 'PENDING');
-  const activeDeals = dashboardDeals.filter(d => d.status === 'ACTIVE');
+  // Performance calculations
+  const closedDealsCurrentYear = dashboardDeals.filter(d => d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear);
+  const pendingDeals = dashboardDeals.filter(d => d.status === 'PENDING' && getLAPart(d.date, 'year') === currentYear);
+  const activeDeals = dashboardDeals.filter(d => d.status === 'ACTIVE' && getLAPart(d.date, 'year') === currentYear);
 
-  const totalVolume = closedDeals.reduce((sum, d) => sum + d.salePrice, 0);
-  const earnedComm = closedDeals.reduce((sum, d) => sum + d.commissionAmount, 0);
+  const totalVolume = closedDealsCurrentYear.reduce((sum, d) => sum + d.salePrice, 0);
+  const earnedComm = closedDealsCurrentYear.reduce((sum, d) => sum + d.commissionAmount, 0);
   const pendingComm = pendingDeals.reduce((sum, d) => sum + d.commissionAmount, 0);
   const activeComm = activeDeals.reduce((sum, d) => sum + d.commissionAmount, 0);
-  const totalUnits = closedDeals.length;
+  const totalUnits = closedDealsCurrentYear.length;
+
+  const buyerUnits = closedDealsCurrentYear.filter(d => d.side === 'BUYER' || d.side === 'BOTH').length;
+  const sellerUnits = closedDealsCurrentYear.filter(d => d.side === 'SELLER' || d.side === 'BOTH').length;
 
   const activeListingVolume = activeDeals.reduce((sum, d) => sum + d.salePrice, 0);
   const pendingListingVolume = pendingDeals.reduce((sum, d) => sum + d.salePrice, 0);
-  const totalCheckIns = dashboardOpenHouses.reduce((sum, oh) => sum + (oh.visitorCount || 0), 0);
 
-  const leadSourceData = useMemo(() => {
-    const sources: Record<string, number> = {};
-    dashboardLeads.forEach(l => { sources[l.source] = (sources[l.source] || 0) + 1; });
-    return Object.entries(sources).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
-  }, [dashboardLeads]);
-
+  // Monthly Production logic for comparison
   const monthlyData = useMemo(() => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months.map((m, i) => ({
-      month: m,
-      value: closedDeals.filter(d => getLAPart(d.date, 'month') - 1 === i).reduce((s, d) => s + d.salePrice, 0)
-    }));
-  }, [closedDeals]);
+    
+    const getMetricVal = (dList: Deal[]) => {
+      switch (chartView) {
+        case 'LIST': return dList.filter(d => d.side === 'SELLER' || d.side === 'BOTH').reduce((s, d) => s + d.salePrice, 0);
+        case 'BUY': return dList.filter(d => d.side === 'BUYER' || d.side === 'BOTH').reduce((s, d) => s + d.salePrice, 0);
+        case 'UNITS': return dList.length;
+        case 'VOLUME':
+        default: return dList.reduce((s, d) => s + d.salePrice, 0);
+      }
+    };
+
+    return months.map((m, i) => {
+      const monthClosed = dashboardDeals.filter(d => d.status === 'CLOSED' && getLAPart(d.date, 'month') - 1 === i);
+      const curYearDeals = monthClosed.filter(d => getLAPart(d.date, 'year') === currentYear);
+      const preYearDeals = monthClosed.filter(d => getLAPart(d.date, 'year') === prevYear);
+
+      return {
+        month: m,
+        current: getMetricVal(curYearDeals),
+        previous: getMetricVal(preYearDeals),
+        // Extra payload for CustomTooltip
+        curVol: curYearDeals.reduce((s, d) => s + d.salePrice, 0),
+        preVol: preYearDeals.reduce((s, d) => s + d.salePrice, 0),
+        curUnits: curYearDeals.length,
+        preUnits: preYearDeals.length
+      };
+    });
+  }, [dashboardDeals, chartView, currentYear, prevYear]);
+
+  // Comparison Summary Header Logic
+  const comparisonText = useMemo(() => {
+    const curYTD = monthlyData.reduce((sum, d) => sum + d.current, 0);
+    const preYTD = monthlyData.reduce((sum, d) => sum + d.previous, 0);
+    
+    if (preYTD === 0) return { text: "No previous year data to compare.", color: "text-slate-400" };
+    
+    const diff = ((curYTD - preYTD) / preYTD) * 100;
+    const status = diff > 0 ? "Above" : diff < 0 ? "Below" : "On Par";
+    const color = diff > 0 ? "text-emerald-500" : diff < 0 ? "text-rose-500" : "text-slate-500";
+    
+    return {
+      text: `You are ${status} with last year by ${Math.abs(diff).toFixed(1)}%.`,
+      color
+    };
+  }, [monthlyData]);
+
+  // Lead Source Mix
+  const leadSourceData = useMemo(() => {
+    const sources: Record<string, number> = {};
+    const pipelineStatuses = [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.ACTIVE, LeadStatus.IN_ESCROW];
+    const pipelineLeads = dashboardLeads.filter(l => pipelineStatuses.includes(l.status) && getLAPart(l.createdAt, 'year') === currentYear);
+    pipelineLeads.forEach(l => { sources[l.source] = (sources[l.source] || 0) + 1; });
+    return Object.entries(sources).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+  }, [dashboardLeads, currentYear]);
 
   const pipelineData = [
     { name: 'Active', value: activeListingVolume, color: '#6366f1' }, 
     { name: 'Pending', value: pendingListingVolume, color: '#4ade80' }, 
   ];
+
+  const yAxisFormatter = (v: number) => {
+    if (chartView === 'UNITS') return v.toString();
+    if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
+    if (v >= 1000) return `$${(v / 1000).toFixed(0)}k`;
+    return `$${v}`;
+  };
 
   const handleOpenInvite = () => {
     setInviteEmail('');
@@ -149,18 +240,20 @@ const Dashboard: React.FC<DashboardProps> = ({
     alert('Invitation link copied to clipboard!');
   };
 
+  const currentLAMonthIdx = getLAPart(laNow, 'month') - 1;
+
   return (
     <div className={`space-y-8 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-8 ${isDarkMode ? 'dark' : ''}`}>
-      {/* Branded Premium Header - REMOVED overflow-hidden to allow Performance Filter dropdown to display */}
+      {/* Branded Premium Header */}
       <div className={`rounded-[2.5rem] p-8 md:p-10 border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="absolute top-0 right-0 w-[24rem] h-[24rem] rounded-full -mr-32 -mt-32 blur-[80px] bg-indigo-500/10 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[24rem] h-[24rem] rounded-full -mr-32 -mt-32 blur-[80px] bg-indigo-50/10 pointer-events-none"></div>
         <div className="relative z-10">
           <div className="flex items-center space-x-4 mb-2">
             <h1 className={`text-4xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
               {viewingAgentId === 'TEAM' ? 'Team' : `${selectedAgentData?.firstName} ${selectedAgentData?.lastName}`} Production
             </h1>
           </div>
-          <p className="text-slate-500 font-semibold text-lg">Real-time performance metrics and pipeline health.</p>
+          <p className="text-slate-500 font-semibold text-lg">Real-time performance metrics and pipeline health for {currentYear}.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 relative z-20 w-full md:w-auto">
@@ -234,7 +327,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Snapshot Sections (RESTORED) */}
+      {/* Snapshot Sections */}
       <section className="space-y-4">
         <div className="flex items-center space-x-3 text-slate-800 px-2">
           <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
@@ -275,16 +368,22 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div className="w-full grid grid-cols-2 gap-4 mt-auto">
               <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ACTIVE</span>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">ACTIVE</span>
+                  </div>
+                  <span className="text-[10px] font-black text-indigo-500">{activeDeals.length} UNIT{activeDeals.length !== 1 ? 'S' : ''}</span>
                 </div>
                 <p className="text-base font-black">${activeListingVolume.toLocaleString()}</p>
               </div>
               <div className={`p-4 rounded-2xl border transition-all flex flex-col justify-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PENDING</span>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PENDING</span>
+                  </div>
+                  <span className="text-[10px] font-black text-emerald-500">{pendingDeals.length} UNIT{pendingDeals.length !== 1 ? 'S' : ''}</span>
                 </div>
                 <p className="text-base font-black">${pendingListingVolume.toLocaleString()}</p>
               </div>
@@ -320,15 +419,15 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="w-full grid grid-cols-3 gap-3 mt-auto">
               <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">EARNED</p>
-                <p className="text-[11px] font-black truncate">${earnedComm.toLocaleString()}</p>
+                <p className="text-11px font-black truncate">${earnedComm.toLocaleString()}</p>
               </div>
               <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">PENDING</p>
-                <p className="text-[11px] font-black truncate">${pendingComm.toLocaleString()}</p>
+                <p className="text-11px font-black truncate">${pendingComm.toLocaleString()}</p>
               </div>
               <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1">ACTIVE</p>
-                <p className="text-[11px] font-black truncate">${activeComm.toLocaleString()}</p>
+                <p className="text-11px font-black truncate">${activeComm.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -346,8 +445,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {[
                   { label: 'To Do', val: milestoneCounts.todos, icon: 'fa-check', color: 'text-indigo-600', bg: 'bg-indigo-50', view: 'tasks' },
                   { label: 'Birthdays', val: milestoneCounts.birthdays, icon: 'fa-cake-candles', color: 'text-pink-600', bg: 'bg-pink-50', view: 'calendar' },
-                  { label: 'Anniv.', val: milestoneCounts.weddingAnnivs, icon: 'fa-ring', color: 'text-purple-600', bg: 'bg-purple-50', view: 'calendar' },
-                  { label: 'Home Day', val: milestoneCounts.homeAnnivs, icon: 'fa-house-chimney-user', color: 'text-emerald-600', bg: 'bg-emerald-50', view: 'calendar' }
+                  { label: 'Wedding Anniv.', val: milestoneCounts.weddingAnnivs, icon: 'fa-ring', color: 'text-purple-600', bg: 'bg-purple-50', view: 'calendar' },
+                  { label: 'Home Anniv.', val: milestoneCounts.homeAnnivs, icon: 'fa-house-chimney-user', color: 'text-emerald-600', bg: 'bg-emerald-50', view: 'calendar' }
                 ].map((item, idx) => (
                   <button 
                     key={idx}
@@ -368,47 +467,83 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
-      {/* Growth Metrics (RESTORED) */}
+      {/* Growth Metrics */}
       <section className="space-y-4">
         <div className="flex items-center space-x-3 text-slate-800 px-2">
           <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
           <h2 className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">Growth Metrics</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           <ProductionStatCard isDarkMode={isDarkMode} label="Total Volume" value={`$${totalVolume.toLocaleString()}`} trend="Real-time" isDecrease={false} comparison="CLOSED SALES" />
           <ProductionStatCard isDarkMode={isDarkMode} label="Average Deal" value={`$${totalUnits > 0 ? (totalVolume/totalUnits).toLocaleString() : 0}`} trend="Avg" isDecrease={false} comparison="PER UNIT" />
           <ProductionStatCard isDarkMode={isDarkMode} label="Gross GCI" value={`$${earnedComm.toLocaleString()}`} trend="Earned" isDecrease={false} comparison="TOTAL REVENUE" />
           <ProductionStatCard isDarkMode={isDarkMode} label="Transactions" value={`${totalUnits} units`} trend="Count" isDecrease={false} comparison="CLOSED YTD" />
-          <ProductionStatCard 
-            isDarkMode={isDarkMode}
-            label="Open Houses" 
-            value={`${totalCheckIns} visits`} 
-            trend="Total" 
-            isDecrease={false} 
-            comparison="VISITOR FLOW" 
-            onClick={() => onNavigate('open-house')} 
-            cursorPointer={true}
-          />
+          <ProductionStatCard isDarkMode={isDarkMode} label="Buyer Units" value={`${buyerUnits}`} trend="Sides" isDecrease={false} comparison="CLOSED BUYERS" />
+          <ProductionStatCard isDarkMode={isDarkMode} label="Seller Units" value={`${sellerUnits}`} trend="Sides" isDecrease={false} comparison="CLOSED SELLERS" />
         </div>
       </section>
 
-      {/* Detailed Analytics & Lead Source Mix */}
+      {/* Detailed Analytics & Ranking Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className={`lg:col-span-2 p-10 rounded-[3rem] border shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="text-xl font-black tracking-tight">Monthly Production</h3>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Closed Sales Volume</span>
+          <div className="flex flex-col mb-10 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h3 className="text-xl font-black tracking-tight">Monthly Production</h3>
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  {(['VOLUME', 'LIST', 'BUY', 'UNITS'] as ChartView[]).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setChartView(v)}
+                      className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${chartView === v ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {v === 'VOLUME' ? 'Total Volume' : v === 'LIST' ? 'List Side' : v === 'BUY' ? 'Buy Side' : 'Units'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compare Previous YTD</span>
+                <button 
+                  onClick={() => setCompareLastYear(!compareLastYear)}
+                  className={`w-12 h-6 rounded-full relative transition-colors ${compareLastYear ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${compareLastYear ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+            </div>
+
+            {/* Dynamic Comparison Summary */}
+            <div className="flex items-center space-x-2">
+              <span className={`text-lg font-black ${comparisonText.color}`}>
+                {comparisonText.text}
+              </span>
+            </div>
           </div>
+
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
+              <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} tickFormatter={(v) => `$${v/1000}k`} />
-                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000'}} />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40} fill="#6366f1">
-                    {monthlyData.map((entry, index) => <Cell key={`cell-${index}`} fill={index === currentLAMonthIdx ? '#6366f1' : isDarkMode ? '#475569' : '#1e293b'} />)}
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#94a3b8', fontSize: 10}} 
+                  tickFormatter={yAxisFormatter}
+                />
+                <Tooltip 
+                  cursor={{fill: isDarkMode ? '#ffffff05' : '#f8fafc'}} 
+                  content={<CustomTooltip chartView={chartView} isDarkMode={isDarkMode} />}
+                />
+                {compareLastYear && (
+                  <Bar dataKey="previous" fill={isDarkMode ? '#1e293b' : '#e2e8f0'} radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30} />
+                )}
+                <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30}>
+                    {monthlyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === currentLAMonthIdx ? '#6366f1' : isDarkMode ? '#475569' : '#1e293b'} />
+                    ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -416,8 +551,84 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <div className="space-y-8 lg:col-span-1">
-          {/* Lead Source Mix - ENHANCED CIRCLE DISPLAY */}
-          <div className={`p-10 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+          {/* Agent Ranking Box */}
+          <div className={`p-8 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+             <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black tracking-tight">Agent Leaderboard</h3>
+                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-50 px-2 py-1 rounded-lg">Top Performers</span>
+             </div>
+
+             <div className="flex-1 space-y-4 overflow-y-auto scrollbar-hide pr-1">
+                {agents.map(agent => {
+                   const agentClosedDeals = deals.filter(d => 
+                     d.assignedUserId === agent.id && 
+                     d.status === 'CLOSED' && 
+                     getLAPart(d.date, 'year') === currentYear
+                   );
+                   const volume = agentClosedDeals.reduce((sum, d) => sum + d.salePrice, 0);
+                   const units = agentClosedDeals.length;
+                   return { ...agent, volume, units };
+                }).sort((a, b) => b.volume - a.volume).map((agent, index) => {
+                  const isTop3 = index < 3;
+                  const rankColor = index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-slate-300' : index === 2 ? 'bg-orange-400' : 'bg-slate-100';
+                  const rankIcon = index === 0 ? 'fa-crown' : index === 1 ? 'fa-medal' : index === 2 ? 'fa-award' : '';
+                  const maxAgentVolume = agents.reduce((max, a) => {
+                    const vol = deals.filter(d => d.assignedUserId === a.id && d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear).reduce((s, d) => s + d.salePrice, 0);
+                    return Math.max(max, vol);
+                  }, 1);
+                  
+                  return (
+                    <div 
+                      key={agent.id} 
+                      className={`p-4 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${isDarkMode ? 'bg-slate-800/50 border-slate-800 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-md'}`}
+                      onClick={() => { onSetViewingAgentId(agent.id); }}
+                    >
+                      <div className="flex items-center space-x-4 flex-1 overflow-hidden">
+                        <div className="relative shrink-0">
+                          <img src={agent.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 shadow-md" alt="" />
+                          <div className={`absolute -top-2 -left-2 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] text-white font-black shadow-lg ${rankColor}`}>
+                            {isTop3 ? <i className={`fas ${rankIcon}`}></i> : index + 1}
+                          </div>
+                        </div>
+                        <div className="overflow-hidden">
+                           <p className="text-sm font-black truncate flex items-center">
+                             {agent.firstName} {agent.lastName}
+                             {index === 0 && <i className="fas fa-trophy text-yellow-500 ml-2 text-[10px]" title="Top Producer"></i>}
+                           </p>
+                           <div className="flex items-center space-x-2 mt-0.5">
+                              <div className="flex-1 h-1 bg-slate-200 rounded-full min-w-[60px] overflow-hidden">
+                                 <div className="h-full bg-indigo-500" style={{ width: `${(agent.volume / maxAgentVolume) * 100}%` }}></div>
+                              </div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">{agent.units} Units</span>
+                           </div>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4 shrink-0">
+                        <p className="text-sm font-black text-indigo-600">${(agent.volume / 1000000).toFixed(1)}M</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
+                      </div>
+                    </div>
+                  );
+                })}
+             </div>
+
+             <div className="mt-8 pt-6 border-t border-slate-100">
+                <button 
+                  onClick={() => onNavigate('reports')}
+                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center space-x-3"
+                >
+                   <span>Full Team Analytics</span>
+                   <i className="fas fa-arrow-right text-[9px]"></i>
+                </button>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1">
+           {/* Lead Source Mix - CIRCLE DISPLAY */}
+           <div className={`p-10 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
             <h3 className="text-2xl font-black tracking-tight mb-10 leading-none">Lead Source Mix</h3>
             <div className="flex-1 min-h-[300px] relative mb-10">
               <ResponsiveContainer width="100%" height="100%">
@@ -459,7 +670,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Invitation Modal (RESTORED) */}
+      {/* Invitation Modal */}
       {isInviteModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsInviteModalOpen(false)}></div>
@@ -473,7 +684,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <form onSubmit={handleSendInvite} className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Agent Email Address</label>
-                    <input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className={`w-full border rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`} placeholder="agent@email.com" />
+                    <input required type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className={`w-full border rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`} placeholder="agent@email.com" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Role</label>

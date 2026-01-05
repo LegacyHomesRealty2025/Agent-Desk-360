@@ -34,20 +34,26 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
     [agents, selectedAgentId]
   );
 
-  const currentYear = getLAPart(new Date(), 'year');
+  const laNow = new Date();
+  const currentYear = getLAPart(laNow, 'year');
   const prevYear = currentYear - 1;
 
-  // Primary filtering logic
+  // Primary filtering logic - ENSURE NO DELETED ITEMS
   const baseDeals = useMemo(() => {
     let list = reportType === 'TEAM' ? deals : deals.filter(d => d.assignedUserId === selectedAgentId);
+    list = list.filter(d => !d.isDeleted);
+    
     if (sideFilter !== 'ALL') {
-      list = list.filter(d => d.side === sideFilter);
+      // Corrected to match Dashboard logic for "BOTH" sides
+      list = list.filter(d => d.side === sideFilter || d.side === 'BOTH');
     }
     return list;
   }, [deals, reportType, selectedAgentId, sideFilter]);
 
   const baseLeads = useMemo(() => {
     let list = reportType === 'TEAM' ? leads : leads.filter(l => l.assignedAgentId === selectedAgentId);
+    list = list.filter(l => !l.isDeleted);
+    
     if (sideFilter !== 'ALL') {
       const tag = sideFilter === 'BUYER' ? 'Buyer' : 'Seller';
       list = list.filter(l => l.tags.includes(tag));
@@ -205,7 +211,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h2 className="text-3xl font-black text-slate-900 tracking-tight">Performance Analytics</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">Production trends and YoY conversion metrics in LA Time.</p>
+            <p className="text-sm text-slate-500 font-medium mt-1">Production trends and YoY conversion metrics in LA Time for {currentYear}.</p>
           </div>
           <div className="flex items-center space-x-3">
              <button 

@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata } from './types.ts';
-import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS } from './mockData.ts';
+import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata, YearlyGoal } from './types.ts';
+import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS, MOCK_GOALS } from './mockData.ts';
 import Layout from './components/Layout.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import LeadList from './components/LeadList.tsx';
@@ -38,7 +39,7 @@ const DEFAULT_TAGS = [
 
 const TZ = 'America/Los_Angeles';
 
-const DATA_VERSION = '1.0.5';
+const DATA_VERSION = '1.0.6';
 const STORAGE_KEYS = {
   VERSION: 'af_crm_version',
   LEADS: 'af_crm_leads',
@@ -50,7 +51,8 @@ const STORAGE_KEYS = {
   SOURCES: 'af_crm_sources',
   TAGS: 'af_crm_tags',
   TRASHED_SOURCES: 'af_crm_trashed_sources',
-  TRASHED_TAGS: 'af_crm_trashed_tags'
+  TRASHED_TAGS: 'af_crm_trashed_tags',
+  GOALS: 'af_crm_goals'
 };
 
 export interface NavItemConfig {
@@ -144,6 +146,13 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEYS.EMAILS);
     if (savedVersion !== DATA_VERSION) return MOCK_EMAILS;
     return saved ? JSON.parse(saved) : MOCK_EMAILS;
+  });
+
+  const [goals, setGoals] = useState<YearlyGoal[]>(() => {
+    const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
+    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
+    if (savedVersion !== DATA_VERSION) return MOCK_GOALS;
+    return saved ? JSON.parse(saved) : MOCK_GOALS;
   });
 
   const [sources, setSources] = useState<string[]>(() => {
@@ -246,7 +255,8 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEYS.TAGS, JSON.stringify(tags));
     localStorage.setItem(STORAGE_KEYS.TRASHED_SOURCES, JSON.stringify(trashedSources));
     localStorage.setItem(STORAGE_KEYS.TRASHED_TAGS, JSON.stringify(trashedTags));
-  }, [users, leads, tasks, deals, openHouses, emails, sources, tags, trashedSources, trashedTags]);
+    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
+  }, [users, leads, tasks, deals, openHouses, emails, sources, tags, trashedSources, trashedTags, goals]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   
@@ -269,6 +279,7 @@ const App: React.FC = () => {
     
     const notificationItems: NotificationItem[] = [];
     
+    // REDEFINED: Only count uncompleted tasks that are due today or in the past
     const pendingTasks = myTasks.filter(t => !t.isCompleted && t.dueDate.split('T')[0] <= todayStr);
     pendingTasks.forEach(t => {
       notificationItems.push({
@@ -287,7 +298,12 @@ const App: React.FC = () => {
       });
     });
 
-    return { items: notificationItems, hasTasks: pendingTasks.length > 0, hasEvents: activeMilestoneLeads.length > 0, totalCount: notificationItems.length };
+    return { 
+      items: notificationItems, 
+      hasTasks: pendingTasks.length > 0, 
+      hasEvents: activeMilestoneLeads.length > 0, 
+      totalCount: notificationItems.length 
+    };
   }, [tasks, leads, currentUser]);
 
   const inviteId = useMemo(() => new URLSearchParams(window.location.search).get('invite'), []);
@@ -306,7 +322,7 @@ const App: React.FC = () => {
       const existingIndex = prev.findIndex(l => l.email.toLowerCase() === newLead.email.toLowerCase() || l.phone === newLead.phone);
       if (existingIndex > -1) {
         const existing = prev[existingIndex];
-        const updatedLead = { ...existing, updatedAt: MOCKED_NOW.toISOString(), notes: [...newLead.notes, ...existing.notes], checkInTime: MOCKED_NOW.toISOString(), openHouseId: newLead.openHouseId };
+        const updatedLead = { ...existing, updatedAt: new Date().toISOString(), notes: [...newLead.notes, ...existing.notes], checkInTime: new Date().toISOString(), openHouseId: newLead.openHouseId };
         return prev.map((l, i) => i === existingIndex ? updatedLead : l);
       }
       return [newLead, ...prev];
@@ -348,7 +364,7 @@ const App: React.FC = () => {
   };
 
   const handleInviteAgent = (email: string, role: UserRole) => {
-    const newInvite: Invitation = { id: `inv_${Date.now()}`, email, role, createdAt: MOCKED_NOW.toISOString() };
+    const newInvite: Invitation = { id: `inv_${Date.now()}`, email, role, createdAt: new Date().toISOString() };
     setInvitations(prev => [...prev, newInvite]);
     return newInvite.id;
   };
@@ -424,25 +440,35 @@ const App: React.FC = () => {
     setTrashedTags(prev => prev.filter(t => t.name !== name));
   };
 
+  const handleUpdateGoal = (updatedGoal: YearlyGoal) => {
+    setGoals(prev => {
+      const existingIdx = prev.findIndex(g => g.userId === updatedGoal.userId && g.year === updatedGoal.year);
+      if (existingIdx > -1) {
+        return prev.map((g, i) => i === existingIdx ? updatedGoal : g);
+      }
+      return [...prev, updatedGoal];
+    });
+  };
+
   const renderContent = () => {
     if (!currentUser || !brokerage) return <div>Loading...</div>;
     switch (view) {
-      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} />;
+      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'email': return <EmailDashboard emails={accessibleEmails} currentUser={currentUser} onSendEmail={handleSendEmail} onUpdateEmail={handleUpdateEmail} onDeleteEmail={handleDeleteEmail} isDarkMode={isDarkMode} />;
-      case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: MOCKED_NOW.toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
+      case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
       case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} />;
       case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} />;
       case 'marketing': return <MarketingView currentUser={currentUser} brokerage={brokerage} leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} />;
-      case 'pipeline': return <PipelineView deals={accessibleDeals} leads={accessibleLeads} onAddDeal={d => setDeals(prev => [...prev, d])} onUpdateDeal={(id, u) => setDeals(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: true, deletedAt: MOCKED_NOW.toISOString()} : d))} availableSources={sources} />;
-      case 'reports': return <ReportsView leads={leads} deals={deals} agents={activeUsers} currentUser={currentUser} />;
+      case 'pipeline': return <PipelineView deals={accessibleDeals} leads={accessibleLeads} onAddDeal={d => setDeals(prev => [...prev, d])} onUpdateDeal={(id, u) => setDeals(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: true, deletedAt: new Date().toISOString()} : d))} availableSources={sources} />;
+      case 'reports': return <ReportsView leads={accessibleLeads} deals={accessibleDeals} agents={activeUsers} currentUser={currentUser} />;
       case 'calendar': return <CalendarView leads={accessibleLeads} tasks={accessibleTasks} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} user={currentUser} />;
-      case 'lead-detail': return selectedLead ? <LeadDetail lead={selectedLead} user={currentUser} onBack={() => setView('contacts')} onAddNote={(id, c) => { const note: LeadNote = { id: `n_${Date.now()}`, content: c, createdAt: MOCKED_NOW.toISOString(), authorId: currentUser.id, authorName: `${currentUser.firstName} ${currentUser.lastName}` }; setLeads(prev => prev.map(l => l.id === id ? {...l, notes: [note, ...l.notes]} : l)); }} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} availableSources={sources} availableTags={tags} /> : <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} />;
+      case 'lead-detail': return selectedLead ? <LeadDetail lead={selectedLead} user={currentUser} onBack={() => setView('contacts')} onAddNote={(id, c) => { const note: LeadNote = { id: `n_${Date.now()}`, content: c, createdAt: new Date().toISOString(), authorId: currentUser.id, authorName: `${currentUser.firstName} ${currentUser.lastName}` }; setLeads(prev => prev.map(l => l.id === id ? {...l, notes: [note, ...l.notes]} : l)); }} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} availableSources={sources} availableTags={tags} /> : <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'tasks': return <TaskList tasks={accessibleTasks} leads={accessibleLeads} user={currentUser} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} />;
       case 'trash': return <TrashView leads={leads.filter(l => l.isDeleted)} deals={deals.filter(d => d.isDeleted)} openHouses={openHouses.filter(oh => oh.isDeleted)} users={trashedUsers} trashedSources={trashedSources} trashedTags={trashedTags} onRestoreLead={id => setLeads(prev => prev.map(l => l.id === id ? {...l, isDeleted: false} : l))} onRestoreDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: false} : d))} onRestoreOpenHouse={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: false } : oh))} onRestoreUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: false} : u))} onRestoreSource={handleRestoreSource} onRestoreTag={handleRestoreTag} onBulkRestoreLeads={ids => setLeads(prev => prev.map(l => ids.includes(l.id) ? {...l, isDeleted: false} : l))} onBulkRestoreDeals={ids => setDeals(prev => prev.map(d => ids.includes(d.id) ? {...d, isDeleted: false} : d))} onBulkRestoreOpenHouses={ids => setOpenHouses(prev => prev.map(oh => ids.includes(oh.id) ? { ...oh, isDeleted: false } : oh))} onPermanentDeleteLead={id => setLeads(prev => prev.filter(l => l.id !== id))} onPermanentDeleteDeal={id => setDeals(prev => prev.filter(d => d.id !== id))} onPermanentDeleteOpenHouse={id => setOpenHouses(prev => prev.filter(oh => oh.id !== id))} onPermanentDeleteUser={id => setUsers(prev => prev.filter(u => u.id !== id))} onPermanentDeleteSource={handlePermanentDeleteSource} onPermanentDeleteTag={handlePermanentDeleteTag} onBulkPermanentDeleteLeads={ids => setLeads(prev => prev.filter(l => !ids.includes(l.id)))} onBulkPermanentDeleteDeals={ids => setDeals(prev => prev.filter(d => !ids.includes(d.id)))} onBulkPermanentDeleteOpenHouses={ids => setOpenHouses(prev => prev.filter(oh => !ids.includes(oh.id)))} />;
       case 'settings': return <SettingsView availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} onTrashSource={handleTrashSource} onTrashTag={handleTrashTag} navItems={navItems} onUpdateNavItems={setNavItems} brokerage={brokerage} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
       case 'profile': return <ProfileView user={currentUser} brokerage={brokerage} onUpdate={handleUpdateSelf} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
-      case 'team': return <TeamView users={activeUsers} currentUser={currentUser} onAddUser={u => setUsers(prev => [...prev, u])} onUpdateUser={handleUpdateOtherUser} onDeleteUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: true, deletedAt: MOCKED_NOW.toISOString()} : u))} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} />;
-      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} />;
+      case 'team': return <TeamView users={activeUsers} currentUser={currentUser} onAddUser={u => setUsers(prev => [...prev, u])} onUpdateUser={handleUpdateOtherUser} onDeleteUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: true, deletedAt: new Date().toISOString()} : u))} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} />;
+      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
     }
   };
 
