@@ -1,7 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-// Fix: Imported TrashedMetadata from '../types' instead of '../App'
-import { Lead, Deal, OpenHouse, TrashedMetadata, User } from '../types';
+import { Lead, Deal, OpenHouse, TrashedMetadata, User } from '../types.ts';
 
 interface TrashViewProps {
   leads: Lead[];
@@ -159,7 +157,6 @@ const TrashView: React.FC<TrashViewProps> = ({
   const handleBulkRestore = () => {
     const selectedFullItems = consolidatedTrash.filter(item => selectedItemIds.includes(item.id));
     
-    // Categorize for bulk handlers
     const leadIds = selectedFullItems.filter(i => i.type === 'LEADS').map(i => i.id);
     const dealIds = selectedFullItems.filter(i => i.type === 'DEALS').map(i => i.id);
     const ohIds = selectedFullItems.filter(i => i.type === 'OPEN_HOUSES').map(i => i.id);
@@ -172,7 +169,6 @@ const TrashView: React.FC<TrashViewProps> = ({
     if (ohIds.length > 0) onBulkRestoreOpenHouses(ohIds);
     userIds.forEach(id => onRestoreUser(id));
     
-    // Metadata doesn't have bulk restore in App.tsx props yet, so we iterate
     sourceNames.forEach(name => onRestoreSource(name));
     tagNames.forEach(name => onRestoreTag(name));
 
@@ -310,7 +306,6 @@ const TrashView: React.FC<TrashViewProps> = ({
           </div>
         </div>
 
-        {/* Bulk Action Bar */}
         {selectedItemIds.length > 0 && (
           <div className="bg-indigo-600 text-white rounded-3xl px-8 py-6 flex items-center justify-between mb-8 shadow-2xl shadow-indigo-100 animate-in slide-in-from-top-4 duration-300">
             <div className="flex items-center space-x-6">

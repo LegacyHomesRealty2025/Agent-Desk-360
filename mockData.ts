@@ -1,4 +1,4 @@
-import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse, EmailMessage } from './types';
+import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse, EmailMessage } from './types.ts';
 
 export const MOCK_BROKERAGE: Brokerage = {
   id: 'brk_7721',

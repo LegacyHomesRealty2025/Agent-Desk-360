@@ -1,10 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
-import { Lead } from "../types";
+import { Lead } from "../types.ts";
 
 export const getLeadInsight = async (lead: Lead) => {
-  // Initialize GoogleGenAI inside the function to ensure the most up-to-date API key is used
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Provide a 2-sentence tactical sales advice for a real estate agent dealing with this lead: 
@@ -25,9 +24,8 @@ export const getLeadInsight = async (lead: Lead) => {
 };
 
 export const getMarketSummary = async (leads: Lead[]) => {
-  // Initialize GoogleGenAI inside the function to ensure the most up-to-date API key is used
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const leadData = leads.map(l => ({ budget: l.budget, status: l.status, source: l.source }));
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { EmailMessage, User, EmailFolder } from '../types';
+import { EmailMessage, User, EmailFolder } from '../types.ts';
 
 interface EmailDashboardProps {
   emails: EmailMessage[];

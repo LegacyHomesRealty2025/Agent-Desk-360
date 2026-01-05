@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, UserRole } from '../types';
+import { User, UserRole } from '../types.ts';
 
 interface LoginViewProps {
   users: User[];
@@ -15,15 +15,6 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const brokerUser = users.find(u => u.role === UserRole.BROKER) || users[0];
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true);
-    // Simulate OAuth delay
-    setTimeout(() => {
-      setIsLoading(false);
-      onLoginSuccess(brokerUser);
-    }, 1500);
-  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +32,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
         if (foundAgent) {
           setStep('2FA');
         } else {
-          setError('User not found. Try: ' + brokerUser.email);
+          setError('User not found. Try identifying as: ' + brokerUser.email);
         }
       }
     }, 1000);
@@ -98,7 +89,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
               <i className="fas fa-bolt text-white text-2xl"></i>
             </div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3">Agent Desk 360</h1>
-            <p className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">Broker & Admin Portal</p>
+            <p className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">Lead Flow CRM | Secure Access</p>
           </div>
 
           <div className="px-12 pb-16">
@@ -106,7 +97,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
               <div className="space-y-10 animate-in slide-in-from-left-4 duration-500">
                 <form onSubmit={handleLoginSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Email</label>
                     <div className="relative group">
                        <i className="fas fa-envelope absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
                        <input 
@@ -150,39 +141,6 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
                     {isLoading ? <i className="fas fa-circle-notch fa-spin"></i> : <span>Continue to Dashboard</span>}
                   </button>
                 </form>
-
-                {/* Social Auth */}
-                <div className="space-y-6">
-                  <div className="flex items-center space-x-4 opacity-30">
-                    <div className="h-px flex-1 bg-slate-300"></div>
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">log-in with</span>
-                    <div className="h-px flex-1 bg-slate-300"></div>
-                  </div>
-
-                  <div className="flex flex-col space-y-4">
-                    <button 
-                      onClick={() => handleSocialLogin('Google')}
-                      className="w-full h-14 flex items-center justify-center space-x-4 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-200"
-                    >
-                      <i className="fab fa-google text-lg"></i>
-                      <span className="text-xs font-black uppercase tracking-widest">Sign in with Google</span>
-                    </button>
-                    <button 
-                      onClick={() => handleSocialLogin('Facebook')}
-                      className="w-full h-14 flex items-center justify-center space-x-4 bg-[#1877F2] text-white rounded-2xl hover:bg-[#0c63d4] transition-all shadow-lg shadow-blue-200"
-                    >
-                      <i className="fab fa-facebook text-lg"></i>
-                      <span className="text-xs font-black uppercase tracking-widest">Sign in with Facebook</span>
-                    </button>
-                    <button 
-                      onClick={() => handleSocialLogin('Apple')}
-                      className="w-full h-14 flex items-center justify-center space-x-4 bg-black text-white rounded-2xl hover:bg-zinc-900 transition-all shadow-lg shadow-slate-300"
-                    >
-                      <i className="fab fa-apple text-lg"></i>
-                      <span className="text-xs font-black uppercase tracking-widest">Sign in with Apple</span>
-                    </button>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="space-y-10 animate-in slide-in-from-right-4 duration-500">

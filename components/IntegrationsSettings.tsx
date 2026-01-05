@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
-import { IntegrationProvider, Brokerage } from '../types';
+import { IntegrationProvider, Brokerage } from '../types.ts';
 
 interface IntegrationsSettingsProps {
   brokerage: Brokerage;
+  isDarkMode?: boolean;
 }
 
 const INITIAL_PROVIDERS: IntegrationProvider[] = [
@@ -49,7 +49,7 @@ const INITIAL_PROVIDERS: IntegrationProvider[] = [
   }
 ];
 
-const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }) => {
+const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage, isDarkMode }) => {
   const [providers, setProviders] = useState<IntegrationProvider[]>(INITIAL_PROVIDERS);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -66,22 +66,22 @@ const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className={`space-y-8 animate-in fade-in duration-500 ${isDarkMode ? 'dark' : ''}`}>
       <div className="flex flex-col space-y-1">
-        <h3 className="text-xl font-black text-slate-800 tracking-tight">Lead API Integrations</h3>
+        <h3 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Lead API Integrations</h3>
         <p className="text-sm text-slate-500 font-medium">Configure automated ingestion from third-party portals and custom websites.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {providers.map(provider => (
-          <div key={provider.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm hover:border-indigo-300 transition-all flex flex-col group">
+          <div key={provider.id} className={`border rounded-[2rem] p-8 shadow-sm transition-all flex flex-col group ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300'}`}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm ${provider.status === 'ACTIVE' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400 grayscale'}`}>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm ${provider.status === 'ACTIVE' ? 'bg-indigo-50 text-indigo-600' : isDarkMode ? 'bg-slate-800 text-slate-600' : 'bg-slate-50 text-slate-400 grayscale'}`}>
                   <i className={provider.icon}></i>
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-slate-800">{provider.name}</h4>
+                  <h4 className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{provider.name}</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     {provider.status === 'ACTIVE' ? `Last sync: ${new Date(provider.lastIngestionAt || '').toLocaleDateString()}` : 'Connection Pending'}
                   </p>
@@ -92,7 +92,7 @@ const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }
                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
                   provider.status === 'ACTIVE' 
                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
-                    : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                    : isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
                 }`}
               >
                 {provider.status}
@@ -102,11 +102,11 @@ const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Webhook Endpoint</label>
-                <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 group-hover:bg-white group-hover:border-slate-200 transition-all">
-                  <code className="text-xs text-indigo-600 font-bold truncate flex-1">{provider.webhookUrl}</code>
+                <div className={`flex items-center space-x-2 border rounded-xl px-4 py-3 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 group-hover:bg-slate-700' : 'bg-slate-50 border-slate-100 group-hover:bg-white group-hover:border-slate-200'}`}>
+                  <code className="text-xs text-indigo-400 font-bold truncate flex-1">{provider.webhookUrl}</code>
                   <button 
                     onClick={() => copyToClipboard(provider.webhookUrl, provider.id + '-url')}
-                    className="text-slate-300 hover:text-indigo-600 transition-colors"
+                    className="text-slate-400 hover:text-indigo-400 transition-colors"
                   >
                     <i className={`fas ${copiedId === provider.id + '-url' ? 'fa-check text-emerald-500' : 'fa-copy'}`}></i>
                   </button>
@@ -116,11 +116,11 @@ const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }
               {provider.apiKey && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">API Header Secret</label>
-                  <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 group-hover:bg-white group-hover:border-slate-200 transition-all">
+                  <div className={`flex items-center space-x-2 border rounded-xl px-4 py-3 transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 group-hover:bg-slate-700' : 'bg-slate-50 border-slate-100 group-hover:bg-white group-hover:border-slate-200'}`}>
                     <code className="text-xs text-slate-500 font-bold truncate flex-1">••••••••••••••••••••</code>
                     <button 
                       onClick={() => copyToClipboard(provider.apiKey || '', provider.id + '-key')}
-                      className="text-slate-300 hover:text-indigo-600 transition-colors"
+                      className="text-slate-400 hover:text-indigo-400 transition-colors"
                     >
                       <i className={`fas ${copiedId === provider.id + '-key' ? 'fa-check text-emerald-500' : 'fa-copy'}`}></i>
                     </button>
@@ -129,20 +129,20 @@ const IntegrationsSettings: React.FC<IntegrationsSettingsProps> = ({ brokerage }
               )}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-50">
-               <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center hover:translate-x-1 transition-transform">
+            <div className={`mt-8 pt-6 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-50'}`}>
+               <button className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center hover:translate-x-1 transition-transform">
                  View Ingestion Logs <i className="fas fa-arrow-right ml-2"></i>
                </button>
             </div>
           </div>
         ))}
 
-        <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center group hover:border-indigo-300 hover:bg-white transition-all cursor-pointer">
-           <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 mb-4 group-hover:text-indigo-500 shadow-sm transition-colors">
+        <div className={`border-2 border-dashed rounded-[2rem] p-8 flex flex-col items-center justify-center text-center group transition-all cursor-pointer ${isDarkMode ? 'bg-slate-900 border-slate-800 hover:border-indigo-500 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 hover:border-indigo-300 hover:bg-white'}`}>
+           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-sm transition-colors ${isDarkMode ? 'bg-slate-800 text-slate-600 group-hover:text-indigo-400' : 'bg-white text-slate-300 group-hover:text-indigo-50'}`}>
               <i className="fas fa-plus text-2xl"></i>
            </div>
-           <h4 className="text-lg font-black text-slate-400 group-hover:text-slate-800 transition-colors">Add Custom Provider</h4>
-           <p className="text-xs text-slate-400 font-medium max-w-[200px] mt-2">Connect your custom CRM or marketing stack via API.</p>
+           <h4 className={`text-lg font-black transition-colors ${isDarkMode ? 'text-slate-500 group-hover:text-slate-300' : 'text-slate-400 group-hover:text-slate-800'}`}>Add Custom Provider</h4>
+           <p className="text-xs text-slate-500 font-medium max-w-[200px] mt-2">Connect your custom CRM or marketing stack via API.</p>
         </div>
       </div>
 

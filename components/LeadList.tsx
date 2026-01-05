@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Lead, LeadStatus, LeadTemperature } from '../types';
+import { Lead, LeadStatus, LeadTemperature } from '../types.ts';
 
 interface LeadListProps {
   leads: Lead[];
@@ -13,7 +13,7 @@ interface LeadListProps {
   onUpdateTags: (tags: string[]) => void;
 }
 
-type SortOption = 'TEMP_DESC' | 'WARM_FIRST' | 'NORMAL_FIRST' | 'TEMP_ASC' | 'NEWEST_ADDED' | 'OLDEST_ADDED' | 'RECENTLY_UPDATED' | 'SOURCE_ASC' | 'SOURCE_DESC' | 'STATUS_ASC' | 'STATUS_DESC' | 'BUYERS_FIRST' | 'SELLERS_FIRST' | 'INVESTORS_FIRST' | 'PAST_CLIENTS_FIRST' | 'NAME_ASC' | 'NAME_DESC';
+type SortOption = 'TEMP_DESC' | 'WARM_FIRST' | 'NORMAL_FIRST' | 'TEMP_ASC' | 'NEWEST_ADDED' | 'OLDEST_ADDED' | 'RECENTLY_UPDATED' | 'SOURCE_ASC' | 'SOURCE_DESC' | 'STATUS_ASC' | 'STATUS_DESC' | 'BUYERS_FIRST' | 'SELLERS_FIRST' | 'INVESTORS_FIRST' | 'PAST_CLIENTS_FIRST';
 type DisplayMode = 'tile' | 'list';
 type ColumnId = 'selection' | 'hotness' | 'stage' | 'name' | 'address' | 'secondary' | 'budget' | 'source' | 'updated' | 'actions';
 type TabId = string; // Status strings
@@ -35,13 +35,20 @@ const sortLabels: Record<SortOption, string> = {
   BUYERS_FIRST: 'Buyers First',
   SELLERS_FIRST: 'Sellers First',
   INVESTORS_FIRST: 'Investors First',
-  PAST_CLIENTS_FIRST: 'Past Clients First',
-  NAME_ASC: 'Name (A-Z)',
-  NAME_DESC: 'Name (Z-A)'
+  PAST_CLIENTS_FIRST: 'Past Clients First'
 };
 
 const DEFAULT_COLUMN_ORDER: ColumnId[] = ['selection', 'hotness', 'stage', 'name', 'address', 'secondary', 'budget', 'source', 'updated', 'actions'];
-const DEFAULT_STATUS_ORDER: TabId[] = ['ALL', ...Object.values(LeadStatus)];
+const DEFAULT_STATUS_ORDER: TabId[] = ['ALL', LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.ACTIVE, LeadStatus.IN_ESCROW, LeadStatus.CLOSED];
+
+const statusLabels: Record<string, string> = {
+  ALL: 'All Pipeline',
+  [LeadStatus.NEW]: 'New',
+  [LeadStatus.CONTACTED]: 'Contacted',
+  [LeadStatus.ACTIVE]: 'Active',
+  [LeadStatus.IN_ESCROW]: 'Pending',
+  [LeadStatus.CLOSED]: 'Sold'
+};
 
 const columnLabels: Record<ColumnId, string> = {
   selection: '',
@@ -70,6 +77,7 @@ const LeadList: React.FC<LeadListProps> = ({
   onUpdateTags
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -106,6 +114,8 @@ const LeadList: React.FC<LeadListProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
+  const isFullPage = filterStatus !== 'ALL';
+
   const emptyLead: Partial<Lead> = {
     firstName: '',
     lastName: '',
@@ -133,12 +143,13 @@ const LeadList: React.FC<LeadListProps> = ({
 
   // Stats calculation
   const stats = useMemo(() => {
+    const activeLeads = leads.filter(l => !l.isDeleted);
     return {
-      total: leads.length,
-      buyers: leads.filter(l => l.tags?.some(t => t.toLowerCase() === 'buyer')).length,
-      sellers: leads.filter(l => l.tags?.some(t => t.toLowerCase() === 'seller')).length,
-      investors: leads.filter(l => l.tags?.some(t => t.toLowerCase() === 'investor')).length,
-      pastClients: leads.filter(l => l.tags?.some(t => t.toLowerCase() === 'past client') || l.source === 'Past Client').length,
+      total: activeLeads.length,
+      buyers: activeLeads.filter(l => l.tags?.some(t => t.toLowerCase() === 'buyer')).length,
+      sellers: activeLeads.filter(l => l.tags?.some(t => t.toLowerCase() === 'seller')).length,
+      investors: activeLeads.filter(l => l.tags?.some(t => t.toLowerCase() === 'investor')).length,
+      pastClients: activeLeads.filter(l => l.tags?.some(t => t.toLowerCase() === 'past client') || l.source === 'Past Client').length,
     };
   }, [leads]);
 
@@ -325,15 +336,6 @@ const LeadList: React.FC<LeadListProps> = ({
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const toggleLeadTag = (tag: string) => {
-    const currentTags = leadFormData.tags || [];
-    if (currentTags.includes(tag)) {
-      setLeadFormData({ ...leadFormData, tags: currentTags.filter(t => t !== tag) });
-    } else {
-      setLeadFormData({ ...leadFormData, tags: [...currentTags, tag] });
-    }
-  };
-
   const handleAddNewSource = (e: React.FormEvent) => {
     e.preventDefault();
     const val = newSourceInput.trim();
@@ -358,8 +360,19 @@ const LeadList: React.FC<LeadListProps> = ({
     setNewTagInput('');
   };
 
+  // Fixed Error: Implemented toggleLeadTag to manage tag selection in form state
+  const toggleLeadTag = (tag: string) => {
+    const currentTags = leadFormData.tags || [];
+    if (currentTags.includes(tag)) {
+      setLeadFormData({ ...leadFormData, tags: currentTags.filter(t => t !== tag) });
+    } else {
+      setLeadFormData({ ...leadFormData, tags: [...currentTags, tag] });
+    }
+  };
+
   const filteredAndSortedLeads = useMemo(() => {
     return [...leads]
+      .filter(l => !l.isDeleted)
       .filter(l => {
         const matchesStatus = filterStatus === 'ALL' || l.status === filterStatus;
         const matchesSource = selectedSources.length === 0 || selectedSources.includes(l.source);
@@ -416,8 +429,6 @@ const LeadList: React.FC<LeadListProps> = ({
           case 'SOURCE_DESC': return b.source.localeCompare(a.source);
           case 'STATUS_ASC': return a.status.localeCompare(b.status);
           case 'STATUS_DESC': return b.status.localeCompare(a.status);
-          case 'NAME_ASC': return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
-          case 'NAME_DESC': return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
           default: return 0;
         }
       });
@@ -488,6 +499,15 @@ const LeadList: React.FC<LeadListProps> = ({
     }
     setIsBulkTagModalOpen(false);
     setSelectedIds([]);
+  };
+
+  const handleTabClick = (status: string) => {
+    if (filterStatus === status) {
+      setIsExpanded(!isExpanded);
+    } else {
+      setFilterStatus(status);
+      setIsExpanded(false);
+    }
   };
 
   const openNewLeadModal = () => {
@@ -591,43 +611,6 @@ const LeadList: React.FC<LeadListProps> = ({
     }
   };
 
-  const handleHeaderClick = (colId: ColumnId) => {
-    switch (colId) {
-      case 'hotness':
-        setSortBy(prev => prev === 'TEMP_DESC' ? 'TEMP_ASC' : 'TEMP_DESC');
-        break;
-      case 'stage':
-        setSortBy(prev => prev === 'STATUS_ASC' ? 'STATUS_DESC' : 'STATUS_ASC');
-        break;
-      case 'name':
-        setSortBy(prev => prev === 'NAME_ASC' ? 'NAME_DESC' : 'NAME_ASC');
-        break;
-      case 'source':
-        setSortBy(prev => prev === 'SOURCE_ASC' ? 'SOURCE_DESC' : 'SOURCE_ASC');
-        break;
-      case 'updated':
-        setSortBy(prev => prev === 'RECENTLY_UPDATED' ? 'OLDEST_ADDED' : 'RECENTLY_UPDATED');
-        break;
-    }
-  };
-
-  const getSortIcon = (colId: ColumnId) => {
-    const isName = colId === 'name' && (sortBy === 'NAME_ASC' || sortBy === 'NAME_DESC');
-    const isHot = colId === 'hotness' && (sortBy === 'TEMP_DESC' || sortBy === 'TEMP_ASC');
-    const isStage = colId === 'stage' && (sortBy === 'STATUS_ASC' || sortBy === 'STATUS_DESC');
-    const isSource = colId === 'source' && (sortBy === 'SOURCE_ASC' || sortBy === 'SOURCE_DESC');
-    const isUpdated = colId === 'updated' && (sortBy === 'RECENTLY_UPDATED' || sortBy === 'OLDEST_ADDED');
-
-    if (!isName && !isHot && !isStage && !isSource && !isUpdated) return null;
-
-    let isAsc = false;
-    if (sortBy === 'NAME_ASC' || sortBy === 'TEMP_ASC' || sortBy === 'STATUS_ASC' || sortBy === 'SOURCE_ASC' || sortBy === 'OLDEST_ADDED') {
-      isAsc = true;
-    }
-
-    return <i className={`fas fa-chevron-${isAsc ? 'up' : 'down'} ml-2 text-[8px] text-indigo-500`}></i>;
-  };
-
   const renderCell = (lead: Lead, key: ColumnId) => {
     switch (key) {
       case 'selection':
@@ -643,57 +626,63 @@ const LeadList: React.FC<LeadListProps> = ({
         );
       case 'hotness':
         return (
-          <div className="flex items-center space-x-2">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setSortBy(sortBy === 'TEMP_DESC' ? 'TEMP_ASC' : 'TEMP_DESC'); }}
+            className="flex items-center space-x-2 group/hot"
+          >
             <div className={`w-2.5 h-2.5 rounded-full ${
               lead.temperature === LeadTemperature.HOT ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 
               lead.temperature === LeadTemperature.WARM ? 'bg-orange-500' : 
               lead.temperature === LeadTemperature.COLD ? 'bg-blue-500' : 
               'bg-slate-300'
             }`}></div>
-            <span className="text-xs font-black text-slate-600 uppercase tracking-tighter">{lead.temperature}</span>
-          </div>
+            <span className="text-sm font-black text-slate-600 uppercase tracking-tighter group-hover/hot:text-indigo-600 transition-colors">{lead.temperature}</span>
+          </button>
         );
       case 'stage':
         return (
-          <span className={`text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${getStatusBadgeClass(lead.status)}`}>
-            {lead.status}
-          </span>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setSortBy(sortBy === 'STATUS_ASC' ? 'STATUS_DESC' : 'STATUS_ASC'); }}
+            className={`text-[12px] font-black uppercase tracking-widest px-3 py-1 rounded-full border hover:shadow-md transition-all ${getStatusBadgeClass(lead.status)}`}
+          >
+            {statusLabels[lead.status] || lead.status}
+          </button>
         );
       case 'name':
         return (
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-black shrink-0 shadow-sm">{lead.firstName[0]}{lead.lastName[0]}</div>
             <div className="overflow-hidden">
-              <p className="text-base font-bold text-slate-800 truncate">{lead.firstName} {lead.lastName}</p>
+              <p className="text-lg font-bold text-slate-800 truncate">{lead.firstName} {lead.lastName}</p>
             </div>
           </div>
         );
       case 'address':
-        return <span className="text-sm font-semibold text-slate-500 truncate block max-w-[200px]">{lead.propertyAddress || 'N/A'}</span>;
+        return <span className="text-base font-semibold text-slate-500 truncate block max-w-[200px]">{lead.propertyAddress || 'N/A'}</span>;
       case 'secondary':
         return lead.spouseFirstName ? (
           <div className="flex flex-col min-w-0">
-             <span className="text-sm font-bold text-slate-700 truncate">{lead.spouseFirstName} {lead.spouseLastName}</span>
-             <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">{lead.secondaryContactRelationship}</span>
+             <span className="text-base font-bold text-slate-700 truncate">{lead.spouseFirstName} {lead.spouseLastName}</span>
+             <span className="text-[11px] font-black uppercase text-slate-400 tracking-tighter">{lead.secondaryContactRelationship}</span>
           </div>
-        ) : <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 italic">None</span>;
+        ) : <span className="text-[11px] font-black uppercase tracking-widest text-slate-300 italic">None</span>;
       case 'budget':
-        return <span className="text-sm font-black text-slate-800">${lead.budget.toLocaleString()}</span>;
+        return <span className="text-base font-black text-slate-800">${lead.budget.toLocaleString()}</span>;
       case 'source':
         return (
           <div className="flex items-center space-x-2">
-            <i className={`${getSourceIcon(lead.source).icon} ${getSourceIcon(lead.source).color} text-[11px]`}></i>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{lead.source}</span>
+            <i className={`${getSourceIcon(lead.source).icon} ${getSourceIcon(lead.source).color} text-[12px]`}></i>
+            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{lead.source}</span>
           </div>
         );
       case 'updated':
-        return <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(lead.updatedAt).toLocaleDateString()}</span>;
+        return <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{new Date(lead.updatedAt).toLocaleDateString()}</span>;
       case 'actions':
         return (
           <div className="flex items-center justify-end space-x-2">
-            <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-all shadow-sm" title="Email Lead"><i className="fas fa-envelope text-xs"></i></a>
-            <button onClick={(e) => openEditModal(e, lead)} className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Edit Lead"><i className="fas fa-edit text-xs"></i></button>
-            <button onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }} className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Move to Trash"><i className="fas fa-trash-can text-xs"></i></button>
+            <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-all shadow-sm" title="Email Lead"><i className="fas fa-envelope text-sm"></i></a>
+            <button onClick={(e) => openEditModal(e, lead)} className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Edit Lead"><i className="fas fa-edit text-sm"></i></button>
+            <button onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }} className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm" title="Move to Trash"><i className="fas fa-trash-can text-sm"></i></button>
           </div>
         );
       default: return null;
@@ -703,9 +692,9 @@ const LeadList: React.FC<LeadListProps> = ({
   const isPageAllSelected = paginatedLeads.length > 0 && paginatedLeads.every(l => selectedIds.includes(l.id));
 
   return (
-    <div className="space-y-6" ref={topRef}>
+    <div className={`space-y-6 transition-all duration-700 ${isFullPage ? 'pt-2' : ''}`} ref={topRef}>
       {/* Top Navigation & Status Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative z-30">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative z-30 transition-all duration-500 ${isFullPage ? 'ring-2 ring-indigo-500/20 shadow-xl' : ''}`}>
         <div className="flex items-center space-x-3 overflow-x-auto scrollbar-hide pb-2 md:pb-0 flex-1">
           {statusOrder.map((status, idx) => (
             <button
@@ -714,8 +703,8 @@ const LeadList: React.FC<LeadListProps> = ({
               onDragStart={(e) => onDragStart(e, 'tab', idx)}
               onDragOver={(e) => onDragOver(e, idx)}
               onDrop={(e) => onDrop(e, idx)}
-              onClick={() => setFilterStatus(status)}
-              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative group ${
+              onClick={() => handleTabClick(status)}
+              className={`px-6 py-3 rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative group ${
                 dragOverIdx === idx && draggedItem?.type === 'tab' ? 'ring-2 ring-indigo-500 scale-105' : ''
               } ${
                 filterStatus === status 
@@ -724,23 +713,35 @@ const LeadList: React.FC<LeadListProps> = ({
               }`}
             >
               <i className="fas fa-grip-vertical text-[8px] absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-30 transition-opacity"></i>
-              {status}
+              {statusLabels[status] || status}
+              {filterStatus === status && isExpanded && (
+                <span className="ml-2 bg-indigo-500 text-[8px] px-1.5 py-0.5 rounded uppercase tracking-widest text-white shadow-lg animate-in zoom-in-50">Expanded</span>
+              )}
             </button>
           ))}
         </div>
         
         <div className="flex items-center space-x-4">
+          {isFullPage && (
+            <button 
+              onClick={() => { setFilterStatus('ALL'); setIsExpanded(false); }}
+              className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 hover:text-indigo-800 flex items-center space-x-2"
+            >
+              <i className="fas fa-times"></i>
+              <span>Exit Full View</span>
+            </button>
+          )}
+
           <div className="flex bg-slate-100 p-1.5 rounded-xl shrink-0">
-            <button onClick={() => setDisplayMode('tile')} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${displayMode === 'tile' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Grid View"><i className="fas fa-th-large"></i></button>
-            <button onClick={() => setDisplayMode('list')} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${displayMode === 'list' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list"></i></button>
+            <button onClick={() => setDisplayMode('tile')} className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${displayMode === 'tile' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Grid View"><i className="fas fa-th-large"></i></button>
+            <button onClick={() => setDisplayMode('list')} className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${displayMode === 'list' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list"></i></button>
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* CSV/Excel Actions */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl">
                <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-white hover:text-indigo-600 text-slate-400 transition-all" 
+                  className="w-12 h-12 flex items-center justify-center rounded-xl hover:bg-white hover:text-indigo-600 text-slate-400 transition-all" 
                   title="Import Pipeline (CSV)"
                >
                  <i className="fas fa-upload"></i>
@@ -755,7 +756,7 @@ const LeadList: React.FC<LeadListProps> = ({
                <div className="relative">
                   <button 
                     onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                    className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${isExportMenuOpen ? 'bg-white text-indigo-600 shadow-sm' : 'hover:bg-white hover:text-indigo-600 text-slate-400'}`} 
+                    className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${isExportMenuOpen ? 'bg-white text-indigo-600 shadow-sm' : 'hover:bg-white hover:text-indigo-600 text-slate-400'}`} 
                     title="Export Pipeline"
                   >
                     <i className="fas fa-download"></i>
@@ -763,15 +764,15 @@ const LeadList: React.FC<LeadListProps> = ({
                   {isExportMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-[60]" onClick={() => setIsExportMenuOpen(false)}></div>
-                      <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[70] py-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        <p className="px-4 py-2 text-[8px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Download As</p>
-                        <button onClick={exportLeadsToExcel} className="w-full text-left px-5 py-3 hover:bg-indigo-50 transition-colors flex items-center space-x-3 group">
-                          <i className="fas fa-file-excel text-emerald-500 text-xs"></i>
-                          <span className="text-xs font-bold text-slate-700">Excel (.xls)</span>
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[70] py-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                        <p className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Download As</p>
+                        <button onClick={exportLeadsToExcel} className="w-full text-left px-6 py-4 hover:bg-indigo-50 transition-colors flex items-center space-x-3 group">
+                          <i className="fas fa-file-excel text-emerald-500 text-sm"></i>
+                          <span className="text-sm font-bold text-slate-700">Excel (.xls)</span>
                         </button>
-                        <button onClick={exportLeadsToCSV} className="w-full text-left px-5 py-3 hover:bg-indigo-50 transition-colors flex items-center space-x-3 group">
-                          <i className="fas fa-file-csv text-blue-500 text-xs"></i>
-                          <span className="text-xs font-bold text-slate-700">CSV (.csv)</span>
+                        <button onClick={exportLeadsToCSV} className="w-full text-left px-6 py-4 hover:bg-indigo-50 transition-colors flex items-center space-x-3 group">
+                          <i className="fas fa-file-csv text-blue-500 text-sm"></i>
+                          <span className="text-sm font-bold text-slate-700">CSV (.csv)</span>
                         </button>
                       </div>
                     </>
@@ -781,12 +782,12 @@ const LeadList: React.FC<LeadListProps> = ({
 
             <button 
               onClick={() => setIsSettingsOpen(true)}
-              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm"
+              className="w-14 h-14 flex items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-all shadow-sm"
               title="Layout Settings"
             >
-              <i className="fas fa-cog text-lg"></i>
+              <i className="fas fa-cog text-xl"></i>
             </button>
-            <button onClick={openNewLeadModal} className="flex items-center space-x-3 px-6 py-3.5 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 whitespace-nowrap">
+            <button onClick={openNewLeadModal} className="flex items-center space-x-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-base font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 whitespace-nowrap">
               <i className="fas fa-plus"></i>
               <span>New Lead</span>
             </button>
@@ -794,30 +795,47 @@ const LeadList: React.FC<LeadListProps> = ({
         </div>
       </div>
 
+      {/* Stats Ribbon - HIDDEN in Full Page Mode to focus on data */}
+      {!isFullPage && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          {[
+            { label: 'Pipeline Leads', value: stats.total, icon: 'fa-users', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { label: 'Active Buyers', value: stats.buyers, icon: 'fa-cart-shopping', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Active Sellers', value: stats.sellers, icon: 'fa-house-signal', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Investors', value: stats.investors, icon: 'fa-chart-pie', color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Past Clients', value: stats.pastClients, icon: 'fa-clock-rotate-left', color: 'text-amber-600', bg: 'bg-amber-50' }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-5">
+              <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center text-base shadow-sm`}><i className={`fas ${stat.icon}`}></i></div>
+              <div><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p><p className="text-xl font-black text-slate-800">{stat.value}</p></div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Main Search Bar & Bulk Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative group flex-1 w-full">
-          <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-base transition-colors group-focus-within:text-indigo-500"></i>
+          <i className="fas fa-search absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 text-lg transition-colors group-focus-within:text-indigo-500"></i>
           <input
-            type="text" placeholder="Search leads (names, email, spouses, address)..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm font-bold"
+            type="text" placeholder={`Search ${isFullPage ? statusLabels[filterStatus] : ''} leads (names, email, spouses, address)...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-14 pr-12 py-4 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm font-bold"
           />
         </div>
 
         <div className="flex items-center space-x-3 w-full sm:w-auto shrink-0">
-          {/* Bulk Selection Actions */}
           {selectedIds.length > 0 && (
             <div className="flex items-center space-x-2 animate-in zoom-in-95 duration-200">
                <button 
                  onClick={() => setIsBulkTagModalOpen(true)}
-                 className="h-[48px] px-6 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-indigo-100 transition-all flex items-center space-x-2"
+                 className="h-[52px] px-8 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl text-sm font-black uppercase tracking-widest shadow-sm hover:bg-indigo-100 transition-all flex items-center space-x-2"
                >
                  <i className="fas fa-tag"></i>
                  <span>Tag ({selectedIds.length})</span>
                </button>
                <button 
                  onClick={handleBulkDelete}
-                 className="h-[48px] px-6 bg-rose-600 text-white border border-rose-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2 ml-1"
+                 className="h-[52px] px-8 bg-rose-600 text-white border border-rose-600 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2"
                >
                  <i className="fas fa-trash-can"></i>
                  <span>Delete</span>
@@ -826,11 +844,11 @@ const LeadList: React.FC<LeadListProps> = ({
           )}
 
           <div className="relative">
-            <button onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)} className={`h-[48px] px-5 border rounded-xl text-xs font-black uppercase tracking-widest shadow-sm transition-all flex items-center space-x-2 min-w-[120px] ${ (selectedSources.length + selectedTags.length) > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            <button onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)} className={`h-[52px] px-6 border rounded-xl text-sm font-black uppercase tracking-widest shadow-sm transition-all flex items-center space-x-3 min-w-[140px] ${ (selectedSources.length + selectedTags.length) > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
               <i className="fas fa-filter"></i>
               <span>Filters</span>
               {(selectedSources.length + selectedTags.length) > 0 && (
-                <span className="ml-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] scale-90 leading-none">
+                <span className="ml-1 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[11px] scale-90 leading-none">
                   {selectedSources.length + selectedTags.length}
                 </span>
               )}
@@ -838,25 +856,25 @@ const LeadList: React.FC<LeadListProps> = ({
             {isFilterPanelOpen && (
               <>
                 <div className="fixed inset-0 z-[90] bg-transparent" onClick={() => setIsFilterPanelOpen(false)}></div>
-                <div className="absolute right-0 mt-2 w-[320px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter Pipeline</h4>
-                    <button onClick={() => { setSelectedSources([]); setSelectedTags([]); }} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Reset</button>
+                <div className="absolute right-0 mt-2 w-[340px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Filter Pipeline</h4>
+                    <button onClick={() => { setSelectedSources([]); setSelectedTags([]); }} className="text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Reset</button>
                   </div>
-                  <div className="p-4 max-h-[450px] overflow-y-auto scrollbar-hide space-y-6">
+                  <div className="p-5 max-h-[450px] overflow-y-auto scrollbar-hide space-y-8">
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Lead Source</p>
-                      <div className="flex flex-wrap gap-2">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Lead Source</p>
+                      <div className="flex flex-wrap gap-2.5">
                         {availableSources.map(source => (
-                          <button key={source} onClick={() => handleToggleSourceFilter(source)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${selectedSources.includes(source) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{source}</button>
+                          <button key={source} onClick={() => handleToggleSourceFilter(source)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedSources.includes(source) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{source}</button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Classification Tags</p>
-                      <div className="flex flex-wrap gap-2">
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Classification Tags</p>
+                      <div className="flex flex-wrap gap-2.5">
                         {availableTags.map(tag => (
-                          <button key={tag} onClick={() => handleToggleTagFilter(tag)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${selectedTags.includes(tag) ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{tag}</button>
+                          <button key={tag} onClick={() => handleToggleTagFilter(tag)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedTags.includes(tag) ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{tag}</button>
                         ))}
                       </div>
                     </div>
@@ -866,16 +884,16 @@ const LeadList: React.FC<LeadListProps> = ({
             )}
           </div>
           <div className="relative">
-            <button onClick={() => setIsSortOpen(!isSortOpen)} className="h-[48px] px-5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm hover:bg-slate-50 transition-all flex items-center space-x-3 min-w-[210px]">
+            <button onClick={() => setIsSortOpen(!isSortOpen)} className="h-[52px] px-6 bg-white border border-slate-200 rounded-xl text-sm font-black uppercase tracking-widest text-slate-700 shadow-sm hover:bg-slate-50 transition-all flex items-center space-x-3 min-w-[240px]">
               <i className="fas fa-sort-amount-down text-indigo-500"></i>
               <span className="flex-1 text-left truncate">{sortLabels[sortBy]}</span>
             </button>
             {isSortOpen && (
               <>
                 <div className="fixed inset-0 z-[90] bg-transparent" onClick={() => setIsSortOpen(false)}></div>
-                <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-[2rem] shadow-2xl z-[100] py-3 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300">
+                <div className="absolute right-0 mt-3 w-72 bg-white border border-slate-200 rounded-[2rem] shadow-2xl z-[100] py-4 overflow-hidden animate-in fade-in slide-in-from-top-3 duration-300">
                   {(Object.keys(sortLabels) as SortOption[]).map((key) => (
-                    <button key={key} onClick={() => { setSortBy(key); setIsSortOpen(false); }} className={`w-full text-left px-6 py-3 text-xs font-black uppercase tracking-widest transition-colors flex items-center justify-between ${sortBy === key ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}>
+                    <button key={key} onClick={() => { setSortBy(key); setIsSortOpen(false); }} className={`w-full text-left px-8 py-4 text-xs font-black uppercase tracking-widest transition-colors flex items-center justify-between ${sortBy === key ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-50'}`}>
                       <span>{sortLabels[key]}</span>
                       {sortBy === key && <i className="fas fa-check text-xs"></i>}
                     </button>
@@ -889,104 +907,103 @@ const LeadList: React.FC<LeadListProps> = ({
 
       {/* Main Content Area */}
       {displayMode === 'tile' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid gap-5 transition-all duration-500 ${isExpanded ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5'}`}>
           {paginatedLeads.map(lead => (
-            <div key={lead.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 hover:border-indigo-300 hover:shadow-2xl transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between">
-              {/* Temperature Ribbon - Only show for HOT, WARM, COLD */}
+            <div key={lead.id} className={`bg-white border border-slate-200 rounded-[1.75rem] p-6 hover:border-indigo-300 hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between ${isExpanded ? 'min-h-[400px]' : 'min-h-[300px]'}`}>
+              {/* Temperature Ribbon */}
               {lead.temperature !== LeadTemperature.NORMAL && (
-                <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-[8px] font-black uppercase tracking-[0.2em] text-white shadow-sm z-10 ${
+                <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-sm z-10 ${
                   lead.temperature === LeadTemperature.HOT ? 'bg-red-500 shadow-red-500/20' : 
-                  lead.temperature === LeadTemperature.WARM ? 'bg-orange-500' : 
-                  'bg-blue-500'
+                  lead.temperature === LeadTemperature.WARM ? 'bg-orange-500 shadow-orange-500/20' : 
+                  'bg-blue-500 shadow-blue-500/20'
                 }`}>
+                  <i className={`fas ${
+                    lead.temperature === LeadTemperature.HOT ? 'fa-fire' : 
+                    lead.temperature === LeadTemperature.WARM ? 'fa-sun' : 
+                    'fa-snowflake'
+                  } mr-1.5`}></i>
                   {lead.temperature}
                 </div>
               )}
 
               <div onClick={() => onSelectLead(lead)}>
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl">{lead.firstName?.[0]}{lead.lastName?.[0]}</div>
+                <div className="flex items-center space-x-3 mb-5">
+                  <div className={`bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black shrink-0 transition-all ${isExpanded ? 'w-16 h-16 text-2xl' : 'w-12 h-12 text-xl'}`}>{lead.firstName?.[0]}{lead.lastName?.[0]}</div>
                   <div className="overflow-hidden">
-                    <h4 className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{lead.firstName} {lead.lastName}</h4>
+                    <h4 className={`${isExpanded ? 'text-2xl' : 'text-lg'} font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate`}>{lead.firstName} {lead.lastName}</h4>
                     <div className="flex items-center space-x-1.5 mt-1">
-                      <i className={`${getSourceIcon(lead.source).icon} ${getSourceIcon(lead.source).color} text-[10px]`}></i>
-                      <p className="text-xs text-slate-500 font-bold">{lead.source}</p>
-                    </div>
-                    {/* Added Phone Number */}
-                    <div className="flex items-center space-x-2 mt-2">
-                      <i className="fas fa-phone text-[10px] text-indigo-400"></i>
-                      <p className="text-xs text-slate-700 font-black">{lead.phone}</p>
+                      <i className={`${getSourceIcon(lead.source).icon} ${getSourceIcon(lead.source).color} text-[11px]`}></i>
+                      <p className="text-[11px] text-slate-500 font-bold">{lead.source}</p>
                     </div>
                   </div>
                 </div>
-                <div className="mb-4 px-2 space-y-4">
+                <div className={`px-1 space-y-4 ${isExpanded ? 'mb-8' : 'mb-4'}`}>
                   <div>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Property Address</p>
-                    <p className="text-sm font-bold text-slate-700 truncate">{lead.propertyAddress || 'No address provided'}</p>
+                    <p className={`${isExpanded ? 'text-lg' : 'text-sm'} font-bold text-slate-700 truncate`}>{lead.propertyAddress || 'No address provided'}</p>
                   </div>
-
-                  {/* Anniversary/Milestone Mini Indicators in Tile */}
-                  {(lead.dob || lead.weddingAnniversary || lead.homeAnniversary) && (
-                    <div className="flex items-center space-x-2 pt-1">
-                      {lead.dob && <i className="fas fa-cake-candles text-[10px] text-pink-400" title="Birthday"></i>}
-                      {lead.weddingAnniversary && <i className="fas fa-ring text-[10px] text-indigo-400" title="Wedding Anniversary"></i>}
-                      {lead.homeAnniversary && <i className="fas fa-house-chimney-user text-[10px] text-emerald-400" title="Home Anniversary"></i>}
+                  
+                  {isExpanded && lead.email && (
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Direct Email</p>
+                      <p className="text-sm font-black text-indigo-600 truncate">{lead.email}</p>
                     </div>
                   )}
-                  
+
+                  {(lead.dob || lead.weddingAnniversary || lead.homeAnniversary) && (
+                    <div className="flex items-center space-x-2 pt-0.5">
+                      {lead.dob && <i className="fas fa-cake-candles text-xs text-pink-400" title="Birthday"></i>}
+                      {lead.weddingAnniversary && <i className="fas fa-ring text-xs text-indigo-400" title="Wedding Anniversary"></i>}
+                      {lead.homeAnniversary && <i className="fas fa-house-chimney-user text-xs text-emerald-400" title="Home Anniversary"></i>}
+                    </div>
+                  )}
                   {lead.spouseFirstName && (
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center space-x-3">
-                       <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center space-x-3 shadow-inner">
+                       <div className="w-7 h-7 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
                          <i className="fas fa-user-plus text-[10px]"></i>
                        </div>
                        <div className="overflow-hidden">
-                          <p className="text-xs font-black text-slate-700 truncate">{lead.spouseFirstName} {lead.spouseLastName}</p>
+                          <p className="text-[12px] font-black text-slate-700 truncate">{lead.spouseFirstName} {lead.spouseLastName}</p>
                           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{lead.secondaryContactRelationship}</p>
                        </div>
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-5 border-t border-slate-100">
-                <div className="flex items-center space-x-2.5 font-bold uppercase tracking-widest"><i className="far fa-clock"></i><span>Updated {new Date(lead.updatedAt).toLocaleDateString()}</span></div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-5 border-t border-slate-100">
+                <div className="flex items-center space-x-2 font-bold uppercase tracking-widest"><i className="far fa-clock text-xs"></i><span>{new Date(lead.updatedAt).toLocaleDateString()}</span></div>
                 <div className="flex items-center space-x-2 relative z-20">
-                  {/* Email Action Button in Tile View - Placed to the left of edit */}
-                  <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Email Lead"><i className="fas fa-envelope text-sm"></i></a>
-                  <button onClick={(e) => openEditModal(e, lead)} className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-edit text-sm"></i></button>
-                  <button onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-sm"></i></button>
+                  <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Email Lead"><i className="fas fa-envelope text-sm"></i></a>
+                  <button onClick={(e) => openEditModal(e, lead)} className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-edit text-sm"></i></button>
+                  <button onClick={(e) => { e.stopPropagation(); setLeadToDelete(lead); }} className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash text-sm"></i></button>
                 </div>
               </div>
             </div>
           ))}
+          {paginatedLeads.length === 0 && (
+            <div className="col-span-full py-40 text-center opacity-30">
+               <i className="fas fa-user-slash text-7xl mb-6"></i>
+               <p className="text-base font-black uppercase tracking-[0.3em]">No leads match your active filters</p>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+        <div className={`bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden overflow-x-auto transition-all ${isFullPage ? 'ring-2 ring-indigo-500/10' : ''}`}>
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 {columnOrder.map((colId, idx) => (
-                  <th 
-                    key={colId} 
-                    onClick={() => handleHeaderClick(colId)}
-                    className={`px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest transition-colors ${['hotness', 'stage', 'name', 'source', 'updated'].includes(colId) ? 'cursor-pointer hover:bg-indigo-50' : ''} ${colId === 'selection' ? 'w-16 text-center' : ''}`}
-                  >
-                    <div className="flex items-center">
-                      {colId === 'selection' ? (
-                        <div className="flex items-center justify-center">
-                          <input 
-                            type="checkbox" 
-                            checked={isPageAllSelected}
-                            onChange={(e) => { e.stopPropagation(); handleSelectAllOnPage(); }}
-                            className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-all"
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <span>{columnLabels[colId]}</span>
-                          {getSortIcon(colId)}
-                        </>
-                      )}
-                    </div>
+                  <th key={colId} className={`px-10 py-6 text-[12px] font-black text-slate-400 uppercase tracking-widest ${colId === 'selection' ? 'w-16 text-center' : ''}`}>
+                    {colId === 'selection' ? (
+                      <div className="flex items-center justify-center">
+                        <input 
+                          type="checkbox" 
+                          checked={isPageAllSelected}
+                          onChange={handleSelectAllOnPage}
+                          className="w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-all"
+                        />
+                      </div>
+                    ) : columnLabels[colId]}
                   </th>
                 ))}
               </tr>
@@ -996,40 +1013,151 @@ const LeadList: React.FC<LeadListProps> = ({
                 <tr 
                   key={lead.id} 
                   onClick={() => onSelectLead(lead)} 
-                  className={`hover:bg-indigo-50/30 transition-all cursor-pointer group ${selectedIds.includes(lead.id) ? 'bg-indigo-50/20' : ''}`}
+                  className={`hover:bg-indigo-50/30 transition-all cursor-pointer group ${selectedIds.includes(lead.id) ? 'bg-indigo-50/20' : ''} ${isExpanded ? 'scale-[1.01] shadow-lg relative z-10 bg-white' : ''}`}
                 >
                   {columnOrder.map(colId => (
-                    <td key={`${lead.id}-${colId}`} className={`px-8 py-6 ${colId === 'actions' ? 'text-right' : ''}`}>
+                    <td key={`${lead.id}-${colId}`} className={`px-10 ${isExpanded ? 'py-10' : 'py-8'} ${colId === 'actions' ? 'text-right' : ''}`}>
                       {renderCell(lead, colId)}
                     </td>
                   ))}
                 </tr>
               ))}
+              {paginatedLeads.length === 0 && (
+                <tr><td colSpan={columnOrder.length} className="py-40 text-center opacity-30 font-black uppercase tracking-widest">No results</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Bulk Tag Modal */}
-      {isBulkTagModalOpen && (
+      {/* Pagination Controls */}
+      <div className="flex flex-col md:flex-row items-center justify-between bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm gap-8 mt-6">
+        <div className="flex items-center space-x-4 bg-slate-50 border border-slate-200 rounded-xl px-6 py-3">
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Show:</span>
+          <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="bg-transparent border-none text-sm font-black text-slate-700 outline-none cursor-pointer">
+            {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">per page</span>
+        </div>
+        <div className="flex flex-col items-center space-y-3">
+           <div className="flex items-center space-x-6">
+              <button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollToTop(); }} className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all"><i className="fas fa-chevron-left"></i></button>
+              <div className="text-sm font-black text-slate-700 uppercase tracking-[0.2em] px-4">Page {currentPage} of {totalPages || 1}</div>
+              <button disabled={currentPage >= totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all"><i className="fas fa-chevron-right"></i></button>
+           </div>
+           <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Showing {paginatedLeads.length} of {filteredAndSortedLeads.length} leads</p>
+        </div>
+        <button onClick={scrollToTop} className="flex items-center space-x-3 px-8 py-4 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all"><i className="fas fa-arrow-up"></i><span>Back to Top</span></button>
+      </div>
+
+      {/* Config/Settings Modal */}
+      {isSettingsOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsBulkTagModalOpen(false)}></div>
-          <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-200 w-full max-w-xl relative z-10 p-10 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Apply Bulk Tag</h3>
-              <button onClick={() => setIsBulkTagModalOpen(false)} className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-xl"></i></button>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsSettingsOpen(false)}></div>
+          <div className="bg-white rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.3)] border border-slate-200 w-full max-w-3xl relative z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="p-10 border-b border-slate-100 flex items-center justify-between shrink-0">
+               <div>
+                  <h3 className="text-4xl font-black text-slate-800 tracking-tight">Pipeline Config</h3>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">Personalize your lead management layout</p>
+               </div>
+               <button onClick={() => setIsSettingsOpen(false)} className="w-14 h-14 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-2xl"></i></button>
             </div>
-            <p className="text-sm text-slate-500 font-medium mb-8">Apply a classification tag to the {selectedIds.length} selected leads.</p>
-            <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto scrollbar-hide pr-2">
-              {availableTags.map(tag => (
-                <button 
-                  key={tag} 
-                  onClick={() => handleBulkTagApply(tag)}
-                  className="p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-indigo-400 hover:bg-white hover:shadow-md transition-all text-left group"
-                >
-                  <span className="text-xs font-black text-slate-700 uppercase tracking-widest group-hover:text-indigo-600">{tag}</span>
-                </button>
-              ))}
+
+            <div className="flex-1 overflow-y-auto p-12 scrollbar-hide space-y-16">
+               {/* Tab Ordering */}
+               <section className="space-y-8">
+                 <div className="flex items-center space-x-4">
+                   <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+                     <i className="fas fa-tags text-base"></i>
+                   </div>
+                   <h4 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Status Tab Sequence</h4>
+                 </div>
+                 <p className="text-sm text-slate-400 font-medium ml-1">Drag and drop the tabs to change their order in the pipeline navigation bar.</p>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {statusOrder.map((status, idx) => (
+                     <div 
+                        key={status} 
+                        draggable
+                        onDragStart={(e) => onDragStart(e, 'tab', idx)}
+                        onDragOver={(e) => onDragOver(e, idx)}
+                        onDrop={(e) => onDrop(e, idx)}
+                        className={`flex items-center justify-between p-5 bg-slate-50 border-2 rounded-2xl cursor-move transition-all group ${
+                          draggedItem?.type === 'tab' && draggedItem.index === idx ? 'opacity-20' : 
+                          dragOverIdx === idx && draggedItem?.type === 'tab' ? 'border-indigo-500 bg-indigo-50 scale-[1.02]' : 
+                          'border-transparent hover:border-slate-200'
+                        }`}
+                     >
+                       <div className="flex items-center space-x-5">
+                         <i className="fas fa-grip-vertical text-slate-300 group-hover:text-indigo-400 text-sm"></i>
+                         <span className="text-sm font-black text-slate-700 uppercase tracking-widest">{statusLabels[status] || status}</span>
+                       </div>
+                       {status === 'ALL' && <span className="text-[10px] font-black text-indigo-400 uppercase">System Default</span>}
+                     </div>
+                   ))}
+                 </div>
+               </section>
+
+               {/* Column Ordering */}
+               <section className="space-y-8">
+                 <div className="flex items-center space-x-4">
+                   <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
+                     <i className="fas fa-table-columns text-base"></i>
+                   </div>
+                   <h4 className="text-xl font-bold text-slate-800 uppercase tracking-tighter">Table Column Layout</h4>
+                 </div>
+                 <p className="text-sm text-slate-400 font-medium ml-1">Reorder table columns for the list view. Drag the handles below to organize.</p>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                   {columnOrder.map((colId, idx) => (
+                     <div 
+                        key={colId} 
+                        draggable={colId !== 'selection'}
+                        onDragStart={(e) => colId !== 'selection' && onDragStart(e, 'column', idx)}
+                        onDragOver={(e) => colId !== 'selection' && onDragOver(e, idx)}
+                        onDrop={(e) => colId !== 'selection' && onDrop(e, idx)}
+                        className={`flex items-center space-x-5 p-5 bg-slate-50 border-2 rounded-2xl transition-all group ${
+                          colId !== 'selection' ? 'cursor-move' : 'cursor-default'
+                        } ${
+                          draggedItem?.type === 'column' && draggedItem.index === idx ? 'opacity-20' : 
+                          dragOverIdx === idx && draggedItem?.type === 'column' ? 'border-emerald-500 bg-emerald-50 scale-[1.02]' : 
+                          'border-transparent hover:border-slate-200'
+                        }`}
+                     >
+                       {colId !== 'selection' && <i className="fas fa-grip-vertical text-slate-300 group-hover:text-emerald-400 text-sm"></i>}
+                       <span className="text-sm font-black text-slate-700 uppercase tracking-widest">{columnLabels[colId] || 'Selection'}</span>
+                     </div>
+                   ))}
+                 </div>
+               </section>
+            </div>
+
+            <div className="p-12 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+               <button onClick={handleResetSettings} className="text-sm font-black text-rose-500 uppercase tracking-widest hover:underline flex items-center">
+                 <i className="fas fa-rotate-left mr-3"></i>
+                 Reset to Defaults
+               </button>
+               <button onClick={() => setIsSettingsOpen(false)} className="px-12 py-6 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[12px] shadow-2xl hover:bg-black transition-all">Save Layout</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {leadToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setLeadToDelete(null)}></div>
+          <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 relative z-10 animate-in zoom-in-95 duration-200 text-[12px]">
+            <div className="flex items-center space-x-5 mb-8 text-rose-600">
+              <div className="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm">
+                <i className="fas fa-trash-can"></i>
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Move to Trash?</h3>
+            </div>
+            <p className="text-slate-600 mb-10 text-lg font-semibold leading-relaxed">
+              Are you sure you want to delete <span className="text-slate-900 font-black">{leadToDelete.firstName} {leadToDelete.lastName}</span>? This item will be moved to the trash bin.
+            </p>
+            <div className="flex space-x-6">
+              <button onClick={() => setLeadToDelete(null)} className="flex-1 py-5 bg-slate-100 text-slate-600 rounded-xl text-base font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+              <button onClick={executeDeleteLead} className="flex-1 py-5 bg-rose-600 text-white rounded-xl text-base font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all">Move to Trash</button>
             </div>
           </div>
         </div>
@@ -1040,220 +1168,105 @@ const LeadList: React.FC<LeadListProps> = ({
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsBulkDeleteModalOpen(false)}></div>
           <div className="bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-md relative z-10 p-12 text-center animate-in zoom-in-95 duration-200">
-             <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">
+             <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-5xl mx-auto mb-8 shadow-inner">
                 <i className="fas fa-trash-can"></i>
              </div>
-             <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Move to Trash?</h3>
-             <p className="text-slate-500 font-semibold leading-relaxed mb-10">
+             <h3 className="text-4xl font-black text-slate-900 tracking-tight mb-4">Move to Trash?</h3>
+             <p className="text-slate-500 text-lg font-semibold leading-relaxed mb-12">
                You are about to move <span className="text-slate-900 font-black">{selectedIds.length} selected leads</span> to the trash bin. Are you sure you want to proceed?
              </p>
-             <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setIsBulkDeleteModalOpen(false)} className="py-5 bg-slate-100 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
-                <button onClick={executeBulkDelete} className="py-5 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-100 hover:bg-rose-700 transition-all">Confirm Delete</button>
+             <div className="grid grid-cols-2 gap-6">
+                <button onClick={() => setIsBulkDeleteModalOpen(false)} className="py-6 bg-slate-100 text-slate-600 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                <button onClick={executeBulkDelete} className="py-6 bg-rose-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-100 hover:bg-rose-700 transition-all">Confirm Delete</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* Settings Modal - Gears functionality */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsSettingsOpen(false)}></div>
-          <div className="bg-white rounded-[3rem] shadow-[0_50px_100px_rgba(0,0,0,0.3)] border border-slate-200 w-full max-w-3xl relative z-10 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-            <div className="p-10 border-b border-slate-100 flex items-center justify-between shrink-0">
-               <div>
-                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pipeline Config</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Personalize your lead management layout</p>
-               </div>
-               <button onClick={() => setIsSettingsOpen(false)} className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-xl"></i></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-10 scrollbar-hide space-y-12">
-               {/* Tab Ordering */}
-               <section className="space-y-6">
-                 <div className="flex items-center space-x-3">
-                   <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-                     <i className="fas fa-tags text-sm"></i>
-                   </div>
-                   <h4 className="text-lg font-bold text-slate-800 uppercase tracking-tighter">Status Tab Sequence</h4>
-                 </div>
-                 <p className="text-xs text-slate-400 font-medium ml-1">Drag and drop the tabs to change their order in the pipeline navigation bar.</p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                   {statusOrder.map((status, idx) => (
-                     <div 
-                        key={status} 
-                        draggable
-                        onDragStart={(e) => onDragStart(e, 'tab', idx)}
-                        onDragOver={(e) => onDragOver(e, idx)}
-                        onDrop={(e) => onDrop(e, idx)}
-                        className={`flex items-center justify-between p-4 bg-slate-50 border-2 rounded-2xl cursor-move transition-all group ${
-                          draggedItem?.type === 'tab' && draggedItem.index === idx ? 'opacity-20' : 
-                          dragOverIdx === idx && draggedItem?.type === 'tab' ? 'border-indigo-500 bg-indigo-50 scale-[1.02]' : 
-                          'border-transparent hover:border-slate-200'
-                        }`}
-                     >
-                       <div className="flex items-center space-x-4">
-                         <i className="fas fa-grip-vertical text-slate-300 group-hover:text-indigo-400"></i>
-                         <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{status}</span>
-                       </div>
-                       {status === 'ALL' && <span className="text-[9px] font-black text-indigo-400 uppercase">System Default</span>}
-                     </div>
-                   ))}
-                 </div>
-               </section>
-
-               {/* Column Ordering */}
-               <section className="space-y-6">
-                 <div className="flex items-center space-x-3">
-                   <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
-                     <i className="fas fa-table-columns text-sm"></i>
-                   </div>
-                   <h4 className="text-lg font-bold text-slate-800 uppercase tracking-tighter">Table Column Layout</h4>
-                 </div>
-                 <p className="text-xs text-slate-400 font-medium ml-1">Reorder table columns for the list view. Drag the handles below to organize.</p>
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                   {columnOrder.map((colId, idx) => (
-                     <div 
-                        key={colId} 
-                        draggable={colId !== 'selection'}
-                        onDragStart={(e) => colId !== 'selection' && onDragStart(e, 'column', idx)}
-                        onDragOver={(e) => colId !== 'selection' && onDragOver(e, idx)}
-                        onDrop={(e) => colId !== 'selection' && onDrop(e, idx)}
-                        className={`flex items-center space-x-4 p-4 bg-slate-50 border-2 rounded-2xl transition-all group ${
-                          colId !== 'selection' ? 'cursor-move' : 'cursor-default'
-                        } ${
-                          draggedItem?.type === 'column' && draggedItem.index === idx ? 'opacity-20' : 
-                          dragOverIdx === idx && draggedItem?.type === 'column' ? 'border-emerald-500 bg-emerald-50 scale-[1.02]' : 
-                          'border-transparent hover:border-slate-200'
-                        }`}
-                     >
-                       {colId !== 'selection' && <i className="fas fa-grip-vertical text-slate-300 group-hover:text-emerald-400"></i>}
-                       <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{columnLabels[colId] || 'Selection'}</span>
-                     </div>
-                   ))}
-                 </div>
-               </section>
-            </div>
-
-            <div className="p-10 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
-               <button onClick={handleResetSettings} className="text-xs font-black text-rose-500 uppercase tracking-widest hover:underline flex items-center">
-                 <i className="fas fa-rotate-left mr-2"></i>
-                 Reset to Defaults
-               </button>
-               <button onClick={() => setIsSettingsOpen(false)} className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-black transition-all">Save Layout</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {leadToDelete && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setLeadToDelete(null)}></div>
-          <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-200 w-full max-w-md p-8 relative z-10 animate-in zoom-in-95 duration-200 text-[12px]">
-            <div className="flex items-center space-x-4 mb-6 text-rose-600">
-              <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm">
-                <i className="fas fa-trash-can"></i>
-              </div>
-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Move to Trash?</h3>
-            </div>
-            <p className="text-slate-600 mb-8 text-base font-semibold leading-relaxed">
-              Are you sure you want to delete <span className="text-slate-900 font-black">{leadToDelete.firstName} {leadToDelete.lastName}</span>? This item will be moved to the trash bin.
-            </p>
-            <div className="flex space-x-4">
-              <button onClick={() => setLeadToDelete(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={executeDeleteLead} className="flex-1 py-4 bg-rose-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all">Move to Trash</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lead Form Modal */}
+      {/* Lead Form Modal (Combined) */}
       {(isNewLeadModalOpen || isEditModalOpen) && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => { setIsNewLeadModalOpen(false); setIsEditModalOpen(false); }}></div>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-4xl p-10 relative z-10 max-h-[95vh] overflow-y-auto scrollbar-hide text-[12px]">
-            <div className="flex items-center justify-between mb-10">
-              <h3 className="text-3xl font-black text-slate-800 tracking-tight">{isEditModalOpen ? 'Edit Lead Profile' : 'Create New Profile'}</h3>
-              <button onClick={() => { setIsNewLeadModalOpen(false); setIsEditModalOpen(false); }} className="w-12 h-12 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-xl"></i></button>
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-5xl p-12 relative z-10 max-h-[95vh] overflow-y-auto scrollbar-hide text-[14px] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-12">
+              <h3 className="text-4xl font-black text-slate-800 tracking-tight">{isEditModalOpen ? 'Edit Lead Profile' : 'Create New Profile'}</h3>
+              <button onClick={() => { setIsNewLeadModalOpen(false); setIsEditModalOpen(false); }} className="w-14 h-14 flex items-center justify-center rounded-2xl text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-600"><i className="fas fa-times text-2xl"></i></button>
             </div>
             
-            <form onSubmit={handleLeadSubmit} className="space-y-8">
-              {/* PRIMARY SECTION */}
-              <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
-                <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
-                  <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-sm shadow-lg shadow-indigo-100"><i className="fas fa-user"></i></div>
-                  <h4 className="text-base font-black text-slate-800 uppercase tracking-[0.2em]">Primary Contact Information</h4>
+            <form onSubmit={handleLeadSubmit} className="space-y-12">
+              <div className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-10">
+                <div className="flex items-center space-x-4 border-b border-slate-200 pb-6 mb-4">
+                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-base shadow-lg shadow-indigo-100"><i className="fas fa-user"></i></div>
+                  <h4 className="text-lg font-black text-slate-800 uppercase tracking-[0.2em]">Primary Contact Information</h4>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">First Name *</label>
-                    <input type="text" required value={leadFormData.firstName} onChange={e => setLeadFormData({...leadFormData, firstName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="e.g. Michael" />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">First Name *</label>
+                    <input type="text" required value={leadFormData.firstName} onChange={e => setLeadFormData({...leadFormData, firstName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="e.g. Michael" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Last Name *</label>
-                    <input type="text" required value={leadFormData.lastName} onChange={e => setLeadFormData({...leadFormData, lastName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="e.g. Scott" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Last Name *</label>
+                    <input type="text" required value={leadFormData.lastName} onChange={e => setLeadFormData({...leadFormData, lastName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="e.g. Scott" />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Email Address *</label>
-                    <input type="email" required value={leadFormData.email} onChange={e => setLeadFormData({...leadFormData, email: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="email@example.com" />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Email Address *</label>
+                    <input type="email" required value={leadFormData.email} onChange={e => setLeadFormData({...leadFormData, email: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="email@example.com" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Phone Number *</label>
-                    <input type="tel" required value={leadFormData.phone} onChange={e => setLeadFormData({...leadFormData, phone: formatPhone(e.target.value)})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="(555) 000-0000" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Phone Number *</label>
+                    <input type="tel" required value={leadFormData.phone} onChange={e => setLeadFormData({...leadFormData, phone: formatPhone(e.target.value)})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="(555) 000-0000" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Birthday</label>
-                    <input type="date" value={leadFormData.dob} onChange={e => setLeadFormData({...leadFormData, dob: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
+                <div className="grid grid-cols-3 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Birthday</label>
+                    <input type="date" value={leadFormData.dob} onChange={e => setLeadFormData({...leadFormData, dob: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Wedding Anniversary</label>
-                    <input type="date" value={leadFormData.weddingAnniversary} onChange={e => setLeadFormData({...leadFormData, weddingAnniversary: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Wedding Anniversary</label>
+                    <input type="date" value={leadFormData.weddingAnniversary} onChange={e => setLeadFormData({...leadFormData, weddingAnniversary: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Home Anniversary</label>
-                    <input type="date" value={leadFormData.homeAnniversary} onChange={e => setLeadFormData({...leadFormData, homeAnniversary: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Home Anniversary</label>
+                    <input type="date" value={leadFormData.homeAnniversary} onChange={e => setLeadFormData({...leadFormData, homeAnniversary: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
                 </div>
               </div>
 
-              {/* LEAD DATA SECTION */}
-              <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
-                <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
-                  <div className="w-10 h-10 bg-slate-800 text-white rounded-xl flex items-center justify-center text-sm shadow-lg"><i className="fas fa-chart-line"></i></div>
-                  <h4 className="text-base font-black text-slate-800 uppercase tracking-[0.2em]">Lead Data</h4>
+              <div className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-10">
+                <div className="flex items-center space-x-4 border-b border-slate-200 pb-6 mb-4">
+                  <div className="w-12 h-12 bg-slate-800 text-white rounded-xl flex items-center justify-center text-base shadow-lg"><i className="fas fa-chart-line"></i></div>
+                  <h4 className="text-lg font-black text-slate-800 uppercase tracking-[0.2em]">Lead Data</h4>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
                     <div className="flex items-center justify-between px-1">
-                      <label className="text-[11px] font-black text-slate-400 uppercase">Lead Source</label>
-                      <button type="button" onClick={() => setIsAddingSource(!isAddingSource)} className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-tighter flex items-center space-x-1">
+                      <label className="text-[12px] font-black text-slate-400 uppercase">Lead Source</label>
+                      <button type="button" onClick={() => setIsAddingSource(!isAddingSource)} className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-tighter flex items-center space-x-1">
                         <i className={`fas ${isAddingSource ? 'fa-times' : 'fa-plus'} mr-1`}></i>
                         <span>{isAddingSource ? 'Cancel' : 'Add New'}</span>
                       </button>
                     </div>
                     {isAddingSource ? (
-                      <div className="flex space-x-2 animate-in slide-in-from-left-2 duration-200">
-                        <input type="text" className="w-full bg-white border border-indigo-200 rounded-[1.25rem] px-5 py-4 text-base font-bold outline-none shadow-sm" placeholder="Custom Source..." value={newSourceInput} onChange={e => setNewSourceInput(e.target.value)} />
-                        <button type="button" onClick={handleAddNewSource} className="bg-indigo-600 text-white w-14 rounded-2xl flex items-center justify-center shadow-lg"><i className="fas fa-check"></i></button>
+                      <div className="flex space-x-3 animate-in slide-in-from-left-2 duration-200">
+                        <input type="text" className="w-full bg-white border border-indigo-200 rounded-[1.5rem] px-6 py-5 text-lg font-bold outline-none shadow-sm" placeholder="Custom Source..." value={newSourceInput} onChange={e => setNewSourceInput(e.target.value)} />
+                        <button type="button" onClick={handleAddNewSource} className="bg-indigo-600 text-white w-16 rounded-2xl flex items-center justify-center shadow-lg"><i className="fas fa-check text-xl"></i></button>
                       </div>
                     ) : (
-                      <select value={leadFormData.source} onChange={e => setLeadFormData({...leadFormData, source: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
+                      <select value={leadFormData.source} onChange={e => setLeadFormData({...leadFormData, source: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
                         {availableSources.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     )}
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Property Type</label>
-                    <select value={leadFormData.propertyType} onChange={e => setLeadFormData({...leadFormData, propertyType: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Property Type</label>
+                    <select value={leadFormData.propertyType} onChange={e => setLeadFormData({...leadFormData, propertyType: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
                       <option value="PRIMARY">Primary Home</option>
                       <option value="SECONDARY">Secondary Home</option>
                       <option value="INVESTMENT">Investment Property</option>
@@ -1261,18 +1274,17 @@ const LeadList: React.FC<LeadListProps> = ({
                   </div>
                 </div>
 
-                {/* TAGS BOX WITH DROPDOWN */}
-                <div className="space-y-1.5 relative">
-                  <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Classification Tags</label>
+                <div className="space-y-2.5 relative">
+                  <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Classification Tags</label>
                   <button 
                     type="button"
                     onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
-                    className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-left flex items-center justify-between focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm min-h-[64px]"
+                    className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-left flex items-center justify-between focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm min-h-[74px]"
                   >
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2.5">
                       {leadFormData.tags && leadFormData.tags.length > 0 ? (
                         leadFormData.tags.map(tag => (
-                          <span key={tag} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-lg border border-indigo-100 uppercase tracking-tighter flex items-center space-x-2 animate-in zoom-in-95 duration-150">
+                          <span key={tag} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 text-[11px] font-black rounded-lg border border-indigo-100 uppercase tracking-tighter flex items-center space-x-2 animate-in zoom-in-95 duration-150">
                             <span>{tag}</span>
                             <span onClick={(e) => { e.stopPropagation(); toggleLeadTag(tag); }} className="hover:text-indigo-800 cursor-pointer">
                               <i className="fas fa-times scale-90"></i>
@@ -1280,7 +1292,7 @@ const LeadList: React.FC<LeadListProps> = ({
                           </span>
                         ))
                       ) : (
-                        <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px] opacity-60">Add tags to classify lead...</span>
+                        <span className="text-slate-400 font-bold uppercase tracking-widest text-xs opacity-60">Add tags to classify lead...</span>
                       )}
                     </div>
                     <i className={`fas fa-chevron-down text-slate-300 transition-transform duration-200 ${isTagDropdownOpen ? 'rotate-180' : ''}`}></i>
@@ -1289,12 +1301,12 @@ const LeadList: React.FC<LeadListProps> = ({
                   {isTagDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-[130]" onClick={() => setIsTagDropdownOpen(false)}></div>
-                      <div className="absolute z-[140] left-0 right-0 mt-3 bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 space-y-4 animate-in fade-in slide-in-from-top-3 duration-300">
-                        <div className="flex space-x-2 pb-4 border-b border-slate-100">
-                          <input type="text" placeholder="Create new tag..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none" value={newTagInput} onChange={e => setNewTagInput(e.target.value)} />
-                          <button type="button" onClick={handleAddNewTag} className="bg-indigo-600 text-white px-4 rounded-xl text-[10px] font-black uppercase tracking-widest">Create</button>
+                      <div className="absolute z-[140] left-0 right-0 mt-4 bg-white border border-slate-200 rounded-3xl shadow-2xl p-8 space-y-6 animate-in fade-in slide-in-from-top-3 duration-300">
+                        <div className="flex space-x-3 pb-6 border-b border-slate-100">
+                          <input type="text" placeholder="Create new tag..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 text-sm font-bold outline-none" value={newTagInput} onChange={e => setNewTagInput(e.target.value)} />
+                          <button type="button" onClick={handleAddNewTag} className="bg-indigo-600 text-white px-6 rounded-xl text-[11px] font-black uppercase tracking-widest">Create</button>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto scrollbar-hide">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-y-auto scrollbar-hide">
                           {availableTags.map(tag => {
                             const isSelected = leadFormData.tags?.includes(tag);
                             return (
@@ -1302,14 +1314,14 @@ const LeadList: React.FC<LeadListProps> = ({
                                 key={tag}
                                 type="button"
                                 onClick={() => toggleLeadTag(tag)}
-                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-left transition-all flex items-center justify-between border ${
+                                className={`px-5 py-4 rounded-xl text-[11px] font-black uppercase tracking-widest text-left transition-all flex items-center justify-between border ${
                                   isSelected 
                                     ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
                                     : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-indigo-300 hover:text-indigo-600'
                                 }`}
                               >
                                 <span className="truncate">{tag}</span>
-                                {isSelected && <i className="fas fa-check text-[10px]"></i>}
+                                {isSelected && <i className="fas fa-check text-[11px]"></i>}
                               </button>
                             );
                           })}
@@ -1320,79 +1332,79 @@ const LeadList: React.FC<LeadListProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Property Address</label>
-                  <input type="text" value={leadFormData.propertyAddress} onChange={e => setLeadFormData({...leadFormData, propertyAddress: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm" placeholder="Street, City, State, Zip" />
+                  <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Property Address</label>
+                  <input type="text" value={leadFormData.propertyAddress} onChange={e => setLeadFormData({...leadFormData, propertyAddress: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm" placeholder="Street, City, State, Zip" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Temperature</label>
-                    <select value={leadFormData.temperature} onChange={e => setLeadFormData({...leadFormData, temperature: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-black focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Temperature</label>
+                    <select value={leadFormData.temperature} onChange={e => setLeadFormData({...leadFormData, temperature: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-black focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
                       {Object.values(LeadTemperature).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Pipeline Stage</label>
-                    <select value={leadFormData.status} onChange={e => setLeadFormData({...leadFormData, status: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-black focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm cursor-pointer">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Pipeline Stage</label>
+                    <select value={leadFormData.status} onChange={e => setLeadFormData({...leadFormData, status: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all shadow-sm cursor-pointer">
                       {Object.values(LeadStatus).map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Budget ($)</label>
-                    <input type="text" required value={formatBudget(leadFormData.budget)} onChange={handleBudgetChange} className="w-full bg-slate-50 border border-slate-200 rounded-[1.25rem] px-6 py-4 text-lg font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none shadow-sm" placeholder="0" />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Budget ($)</label>
+                    <input type="text" required value={formatBudget(leadFormData.budget)} onChange={handleBudgetChange} className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-5 text-xl font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none shadow-sm" placeholder="0" />
                   </div>
                 </div>
               </div>
 
               {/* SECONDARY CONTACT SECTION */}
-              <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
-                <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
-                  <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-sm shadow-md"><i className="fas fa-user-plus"></i></div>
-                  <h4 className="text-base font-black text-slate-800 uppercase tracking-[0.2em]">Secondary Contact Details</h4>
+              <div className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-10">
+                <div className="flex items-center space-x-4 border-b border-slate-200 pb-6 mb-4">
+                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-base shadow-md"><i className="fas fa-user-plus"></i></div>
+                  <h4 className="text-lg font-black text-slate-800 uppercase tracking-[0.2em]">Secondary Contact Details</h4>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Relationship</label>
-                    <select value={leadFormData.secondaryContactRelationship} onChange={e => setLeadFormData({...leadFormData, secondaryContactRelationship: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm cursor-pointer">
+                <div className="grid grid-cols-3 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Relationship</label>
+                    <select value={leadFormData.secondaryContactRelationship} onChange={e => setLeadFormData({...leadFormData, secondaryContactRelationship: e.target.value as any})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm cursor-pointer">
                       {RELATIONSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">First Name</label>
-                    <input type="text" value={leadFormData.spouseFirstName} onChange={e => setLeadFormData({...leadFormData, spouseFirstName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">First Name</label>
+                    <input type="text" value={leadFormData.spouseFirstName} onChange={e => setLeadFormData({...leadFormData, spouseFirstName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Last Name</label>
-                    <input type="text" value={leadFormData.spouseLastName} onChange={e => setLeadFormData({...leadFormData, spouseLastName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Secondary Email</label>
-                    <input type="email" value={leadFormData.spouseEmail} onChange={e => setLeadFormData({...leadFormData, spouseEmail: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" placeholder="email@example.com" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Secondary Phone</label>
-                    <input type="tel" value={leadFormData.spousePhone} onChange={e => setLeadFormData({...leadFormData, spousePhone: formatPhone(e.target.value)})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" placeholder="(555) 000-0000" />
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Last Name</label>
+                    <input type="text" value={leadFormData.spouseLastName} onChange={e => setLeadFormData({...leadFormData, spouseLastName: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-black text-slate-400 uppercase ml-1">Secondary Birthday</label>
-                    <input type="date" value={leadFormData.spouseDob} onChange={e => setLeadFormData({...leadFormData, spouseDob: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.25rem] px-5 py-4 text-base font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Secondary Email</label>
+                    <input type="email" value={leadFormData.spouseEmail} onChange={e => setLeadFormData({...leadFormData, spouseEmail: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" placeholder="email@example.com" />
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Secondary Phone</label>
+                    <input type="tel" value={leadFormData.spousePhone} onChange={e => setLeadFormData({...leadFormData, spousePhone: formatPhone(e.target.value)})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" placeholder="(555) 000-0000" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Secondary Birthday</label>
+                    <input type="date" value={leadFormData.spouseDob} onChange={e => setLeadFormData({...leadFormData, spouseDob: e.target.value})} className="w-full bg-white border border-slate-200 rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm" />
                   </div>
                 </div>
               </div>
 
-              <div className="pt-10 flex items-center space-x-6">
-                <button type="button" onClick={() => { setIsNewLeadModalOpen(false); setIsEditModalOpen(false); }} className="flex-1 py-5 bg-slate-100 text-slate-600 rounded-[1.5rem] text-base font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
-                <button type="submit" className="flex-1 py-5 bg-indigo-600 text-white rounded-[1.5rem] text-base font-black uppercase tracking-widest shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all">{isEditModalOpen ? 'Save Changes' : 'Create Profile'}</button>
+              <div className="pt-10 flex items-center space-x-8">
+                <button type="button" onClick={() => { setIsNewLeadModalOpen(false); setIsEditModalOpen(false); }} className="flex-1 py-6 bg-slate-100 text-slate-600 rounded-[2rem] text-lg font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                <button type="submit" className="flex-1 py-6 bg-indigo-600 text-white rounded-[2rem] text-lg font-black uppercase tracking-widest shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all">{isEditModalOpen ? 'Save Changes' : 'Create Profile'}</button>
               </div>
             </form>
           </div>

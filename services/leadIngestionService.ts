@@ -1,135 +1,44 @@
-
-import { Lead, LeadStatus, LeadTemperature, User } from "../types";
-
-/**
- * Robust Third-Party API Integration Service
- * Handles transformations from Zillow, Realtor.com, UpNest, etc.
- */
-
-interface RawZillowPayload {
-  contact_info: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-  };
-  property_info: {
-    address: string;
-    price: string;
-  };
-  inquiry_id: string;
-}
-
-interface RawRealtorPayload {
-  lead_details: {
-    full_name: string;
-    email_address: string;
-    phone_number: string;
-    message: string;
-  };
-  property_listing: {
-    street: string;
-    city: string;
-    state: string;
-    zip: string;
-  };
-}
+import { Lead, LeadStatus, LeadTemperature, User, LeadNote } from "../types.ts";
 
 export const leadIngestionService = {
   /**
-   * Transforms a Zillow "Tech Connect" payload into a CRM Lead
+   * Transforms a mock Zillow Tech Connect JSON payload into a CRM Lead object.
    */
-  transformZillow: (payload: RawZillowPayload, brokerageId: string, agentId: string): Lead => {
-    const budget = parseInt(payload.property_info.price.replace(/[^0-9]/g, '')) || 0;
-    return {
-      id: `zillow_${payload.inquiry_id}`,
-      brokerageId,
-      assignedAgentId: agentId,
-      firstName: payload.contact_info.first_name,
-      lastName: payload.contact_info.last_name,
-      email: payload.contact_info.email,
-      phone: payload.contact_info.phone,
-      status: LeadStatus.NEW,
-      temperature: LeadTemperature.HOT,
-      source: 'Zillow API',
-      tags: ['API_Ingested', 'Buyer', 'Zillow_Premier'],
-      propertyType: 'PRIMARY',
-      propertyAddress: payload.property_info.address,
-      budget,
-      notes: [{
-        id: `note_${Date.now()}`,
-        content: `Lead automatically ingested via Zillow Tech Connect API. Inquiry ID: ${payload.inquiry_id}`,
-        createdAt: new Date().toISOString(),
-        authorId: 'system',
-        authorName: 'API Integration'
-      }],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      estimatedDealValue: budget * 0.03,
-      externalId: payload.inquiry_id,
-      integrationSource: 'ZILLOW'
-    };
-  },
-
-  /**
-   * Transforms a Realtor.com lead payload
-   */
-  transformRealtor: (payload: RawRealtorPayload, brokerageId: string, agentId: string): Lead => {
-    const names = payload.lead_details.full_name.split(' ');
-    const address = `${payload.property_listing.street}, ${payload.property_listing.city}, ${payload.property_listing.state} ${payload.property_listing.zip}`;
+  transformZillow: (payload: any, brokerageId: string, agentId: string): Lead => {
+    const { contact_info, property_info, inquiry_id } = payload;
     
+    const leadId = `l_zillow_${Date.now()}`;
+    const timestamp = new Date().toISOString();
+
+    const note: LeadNote = {
+      id: `n_z_${Date.now()}`,
+      content: `Automated Lead Ingestion from Zillow. Property Interest: ${property_info.address} (${property_info.price})`,
+      createdAt: timestamp,
+      authorId: 'SYSTEM',
+      authorName: 'Zillow Tech Connect'
+    };
+
     return {
-      id: `realtor_${Date.now()}`,
-      brokerageId,
+      id: leadId,
+      brokerageId: brokerageId,
       assignedAgentId: agentId,
-      firstName: names[0] || 'Realtor.com',
-      lastName: names.slice(1).join(' ') || 'Lead',
-      email: payload.lead_details.email_address,
-      phone: payload.lead_details.phone_number,
+      firstName: contact_info.first_name || 'Zillow',
+      lastName: contact_info.last_name || 'Lead',
+      email: contact_info.email || '',
+      phone: contact_info.phone || '',
       status: LeadStatus.NEW,
       temperature: LeadTemperature.HOT,
-      source: 'Realtor.com API',
-      tags: ['API_Ingested', 'Buyer'],
+      source: 'Zillow',
+      tags: ['Zillow Lead', 'Buyer'],
       propertyType: 'PRIMARY',
-      propertyAddress: address,
-      budget: 0, // Realtor often provides listings instead of budgets
-      notes: [{
-        id: `note_${Date.now()}`,
-        content: `Lead ingested via Realtor.com. Message: ${payload.lead_details.message}`,
-        createdAt: new Date().toISOString(),
-        authorId: 'system',
-        authorName: 'API Integration'
-      }],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      estimatedDealValue: 0,
-      integrationSource: 'REALTOR'
-    };
-  },
-
-  /**
-   * Generic transformer for custom website webhooks
-   */
-  transformWebhook: (payload: any, brokerageId: string, agentId: string): Lead => {
-    return {
-      id: `webhook_${Date.now()}`,
-      brokerageId,
-      assignedAgentId: agentId,
-      firstName: payload.firstName || payload.first_name || 'New',
-      lastName: payload.lastName || payload.last_name || 'Lead',
-      email: payload.email || '',
-      phone: payload.phone || '',
-      status: LeadStatus.NEW,
-      temperature: LeadTemperature.WARM,
-      source: payload.source || 'Website API',
-      tags: ['API_Ingested', ...(payload.tags || [])],
-      propertyType: payload.propertyType || 'PRIMARY',
-      propertyAddress: payload.address || '',
-      budget: payload.budget || 0,
-      notes: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      estimatedDealValue: (payload.budget || 0) * 0.03
+      propertyAddress: property_info.address,
+      budget: parseInt(property_info.price.replace(/[$,]/g, '')) || 0,
+      notes: [note],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      estimatedDealValue: (parseInt(property_info.price.replace(/[$,]/g, '')) || 0) * 0.03,
+      externalId: inquiry_id,
+      integrationSource: 'ZILLOW_TECH_CONNECT'
     };
   }
 };

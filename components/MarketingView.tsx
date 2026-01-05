@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useRef } from 'react';
-import { User, Lead, UserRole, Brokerage, Deal, MarketingAsset, MarketingFolder } from '../types';
+import { User, Lead, UserRole, Brokerage, Deal, MarketingAsset, MarketingFolder } from '../types.ts';
 import { GoogleGenAI } from "@google/genai";
 
 interface MarketingViewProps {
@@ -15,6 +14,22 @@ type MarketingSection = 'PRINT' | 'LIBRARY' | 'EMAIL' | 'CAMPAIGNS';
 type FlyerType = 'JUST_LISTED' | 'JUST_SOLD' | 'OPEN_HOUSE' | 'PROMOTIONAL';
 type FlyerTheme = 'MODERN' | 'LUXURY' | 'MINIMAL';
 type EmailSubSection = 'MENU' | 'DRIP_TEMPLATES' | 'DRIP_EDITOR';
+
+interface DripTouchpoint {
+  id: string;
+  day: number;
+  subject: string;
+  content: string;
+  type: 'EMAIL' | 'SMS' | 'TASK';
+}
+
+interface DripCampaign {
+  id: string;
+  label: string;
+  icon: string;
+  desc: string;
+  touchpoints: DripTouchpoint[];
+}
 
 const FOLDERS: MarketingFolder[] = [
   { id: 'f1', name: 'Standard Branding', icon: 'fa-star' },
@@ -95,22 +110,6 @@ const DRIP_CAMPAIGNS: DripCampaign[] = [
     ]
   }
 ];
-
-interface DripTouchpoint {
-  id: string;
-  day: number;
-  subject: string;
-  content: string;
-  type: 'EMAIL' | 'SMS' | 'TASK';
-}
-
-interface DripCampaign {
-  id: string;
-  label: string;
-  icon: string;
-  desc: string;
-  touchpoints: DripTouchpoint[];
-}
 
 const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, leads, deals, agents }) => {
   const [activeSection, setActiveSection] = useState<MarketingSection>('PRINT');
@@ -194,10 +193,6 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
 
   const handleDownloadFlyer = () => {
     alert("Synthesizing high-resolution PDF for print...\nYour download will begin shortly.");
-  };
-
-  const handleSocialShare = (platform: string) => {
-    alert(`Posting to ${platform}...\n\nSuccessfully scheduled for 10:00 AM Tomorrow.`);
   };
 
   const handleAssetDownload = (assetName: string) => {
@@ -378,10 +373,6 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                          <i className="fas fa-file-pdf"></i>
                          <span>Download Print PDF</span>
                        </button>
-                       <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.1em] text-xs shadow-xl hover:bg-black transition-all flex items-center justify-center space-x-3">
-                         <i className="fas fa-share-nodes"></i>
-                         <span>Share Digitally</span>
-                       </button>
                      </div>
                    </div>
                  </div>
@@ -393,9 +384,7 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                     id="flyer-canvas"
                     className={`aspect-[8.5/11] bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] w-full max-w-[550px] relative flex flex-col p-10 overflow-hidden transform transition-all duration-700 scale-100 hover:scale-[1.02] border-8 ${flyerTheme === 'LUXURY' ? 'border-slate-900' : 'border-white'}`}
                   >
-                    {/* Flyer Content - Dynamic Layout Based on Theme */}
                     <div className="flex-1 flex flex-col space-y-6">
-                       {/* Header Bar */}
                        <div className="flex justify-between items-center">
                           <div className={`px-5 py-2 rounded-full font-black text-white text-[10px] tracking-[0.3em] uppercase ${flyerTheme === 'LUXURY' ? 'bg-slate-900' : flyerTheme === 'MODERN' ? 'bg-indigo-600' : 'bg-slate-400'}`}>
                             {flyerData.headline || 'JUST LISTED'}
@@ -406,12 +395,10 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                           </div>
                        </div>
 
-                       {/* Main Image */}
                        <div className="aspect-[4/3] bg-slate-100 rounded-3xl overflow-hidden shadow-xl border-4 border-white">
                           <img src={flyerData.image} className="w-full h-full object-cover" alt="Property" />
                        </div>
 
-                       {/* Address & Price */}
                        <div className="space-y-1">
                           <h2 className={`text-3xl font-black tracking-tighter leading-none ${flyerTheme === 'LUXURY' ? 'text-slate-900 font-serif' : 'text-slate-900'}`}>{flyerData.address || 'Property Address'}</h2>
                           <div className="flex items-center space-x-3 text-indigo-600 font-black text-xl">
@@ -421,7 +408,6 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                           </div>
                        </div>
 
-                       {/* Specs */}
                        <div className="flex space-x-6 py-4 border-y border-slate-100">
                           <div className="text-center">
                             <p className="text-[10px] font-black text-slate-400 uppercase">Beds</p>
@@ -437,12 +423,10 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                           </div>
                        </div>
 
-                       {/* Description */}
                        <p className="text-sm text-slate-600 font-medium leading-relaxed flex-1">
-                         {flyerData.description || 'Enter a compelling description for this property in the editor to see it appear here live. Focus on the best features!'}
+                         {flyerData.description || 'Enter a compelling description for this property in the editor to see it appear here live.'}
                        </p>
 
-                       {/* Footer: Agent Info */}
                        <div className={`mt-auto pt-8 border-t-2 flex items-center justify-between ${flyerTheme === 'LUXURY' ? 'border-slate-900' : 'border-slate-100'}`}>
                           <div className="flex items-center space-x-4">
                              <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden shadow-md">
@@ -457,9 +441,6 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                           <div className="text-right space-y-0.5">
                              <p className="text-[11px] font-black text-slate-800">{flyerData.agentPhone}</p>
                              <p className="text-[10px] font-bold text-slate-500">{flyerData.agentEmail}</p>
-                             <div className="pt-2">
-                                <span className="text-[8px] font-black text-white bg-slate-900 px-2 py-1 rounded uppercase tracking-[0.2em]">Contact Expert</span>
-                             </div>
                           </div>
                        </div>
                     </div>
@@ -472,7 +453,6 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
 
       {activeSection === 'LIBRARY' && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
-          {/* Folders Sidebar */}
           <div className="lg:col-span-1 space-y-8">
              <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -480,19 +460,12 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                    {isAdmin && <button onClick={() => alert("Enter folder name...")} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">+ New Folder</button>}
                 </div>
                 <div className="space-y-2">
-                   <button 
-                      onClick={() => setSelectedFolder(null)}
-                      className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl transition-all ${!selectedFolder ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
-                   >
+                   <button onClick={() => setSelectedFolder(null)} className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl transition-all ${!selectedFolder ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}>
                       <i className="fas fa-grid-2"></i>
                       <span className="text-sm font-black tracking-tight">All Assets</span>
                    </button>
                    {FOLDERS.map(folder => (
-                      <button 
-                        key={folder.id}
-                        onClick={() => setSelectedFolder(folder.id)}
-                        className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl transition-all ${selectedFolder === folder.id ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
-                      >
+                      <button key={folder.id} onClick={() => setSelectedFolder(folder.id)} className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl transition-all ${selectedFolder === folder.id ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}>
                          <i className={`fas ${folder.icon}`}></i>
                          <span className="text-sm font-black tracking-tight">{folder.name}</span>
                       </button>
@@ -506,31 +479,21 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                    <div className="h-full bg-emerald-500 w-1/4"></div>
                 </div>
                 <p className="text-[10px] font-bold text-slate-400">12.4 GB / 50 GB Used (Basic Plan)</p>
-                <button onClick={() => alert("Upgrading subscription to ENTERPRISE...")} className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Increase Storage</button>
              </div>
           </div>
 
-          {/* Library Main Area */}
           <div className="lg:col-span-3 space-y-8">
              <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
                 <div className="relative flex-1 max-w-md">
                    <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                   <input 
-                      type="text" 
-                      placeholder="Search assets by name..." 
-                      className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                   />
+                   <input type="text" placeholder="Search assets..." className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                 </div>
-                <div className="flex items-center space-x-3">
-                   {isAdmin && (
-                     <button onClick={handleUploadClick} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center space-x-3">
-                        <i className="fas fa-cloud-arrow-up"></i>
-                        <span>Upload Master Asset</span>
-                     </button>
-                   )}
-                </div>
+                {isAdmin && (
+                  <button onClick={handleUploadClick} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center space-x-3">
+                     <i className="fas fa-cloud-arrow-up"></i>
+                     <span>Upload Asset</span>
+                  </button>
+                )}
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -551,7 +514,7 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                       <div className="space-y-1">
                          <div className="flex items-center justify-between">
                             <h4 className="text-sm font-black text-slate-800 tracking-tight truncate pr-4">{asset.name}</h4>
-                            {asset.isBrokerageStandard && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase rounded-lg border border-indigo-100">Verified</span>}
+                            {asset.isBrokerageStandard && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase rounded-lg border border-indigo-100">Standard</span>}
                          </div>
                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{asset.type} • {new Date(asset.createdAt).toLocaleDateString()}</p>
                       </div>
@@ -570,64 +533,37 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                   <h2 className="text-4xl font-black text-slate-900 tracking-tight">Mail Outreach</h2>
                   <p className="text-lg text-slate-500 font-medium leading-relaxed">Design and deploy high-performance email campaigns with one click.</p>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                    {[
                      { id: 'SEND', label: 'Single Email', desc: 'Compose a direct message to any contact.', icon: 'fa-envelope', color: 'bg-blue-50 text-blue-600', action: handleQuickEmail },
                      { id: 'BLAST', label: 'Bulk Blast', desc: 'Send to lists or entire database.', icon: 'fa-paper-plane-top', color: 'bg-indigo-50 text-indigo-600', action: handleEmailBlast },
                      { id: 'DRIP', label: 'Drip Sequence', desc: 'Ready-made real estate automated sequences.', icon: 'fa-arrows-spin', color: 'bg-emerald-50 text-emerald-600', action: () => setEmailSubView('DRIP_TEMPLATES') },
                    ].map((item, i) => (
-                      <div 
-                        key={i} 
-                        onClick={item.action}
-                        className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 hover:border-indigo-400 transition-all group cursor-pointer"
-                      >
-                         <div className={`w-16 h-16 ${item.color} rounded-[1.5rem] flex items-center justify-center text-2xl mx-auto mb-8 shadow-sm group-hover:scale-110 transition-transform`}>
-                            <i className={`fas ${item.icon}`}></i>
-                         </div>
+                      <div key={i} onClick={item.action} className="p-10 rounded-[3rem] bg-slate-50 border border-slate-100 hover:border-indigo-400 transition-all group cursor-pointer">
+                         <div className={`w-16 h-16 ${item.color} rounded-[1.5rem] flex items-center justify-center text-2xl mx-auto mb-8 shadow-sm group-hover:scale-110 transition-transform`}><i className={`fas ${item.icon}`}></i></div>
                          <h4 className="text-lg font-black text-slate-800 mb-2">{item.label}</h4>
                          <p className="text-sm text-slate-500 font-semibold">{item.desc}</p>
                       </div>
                    ))}
                 </div>
-
-                <div className="pt-10">
-                   <button onClick={() => setActiveSection('CAMPAIGNS')} className="px-12 py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-widest text-xs shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center mx-auto space-x-4">
-                      <span>View Active Mail Stats</span>
-                      <i className="fas fa-chart-line text-base"></i>
-                   </button>
-                </div>
               </>
             ) : emailSubView === 'DRIP_TEMPLATES' ? (
               <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-8">
-                   <button onClick={() => setEmailSubView('MENU')} className="flex items-center space-x-2 text-slate-400 hover:text-indigo-600 transition-colors font-black uppercase tracking-widest text-[10px]">
-                      <i className="fas fa-arrow-left"></i>
-                      <span>Back to Outreach</span>
-                   </button>
+                   <button onClick={() => setEmailSubView('MENU')} className="flex items-center space-x-2 text-slate-400 hover:text-indigo-600 transition-colors font-black uppercase tracking-widest text-[10px]"><i className="fas fa-arrow-left"></i><span>Back</span></button>
                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Ready-Made Drip Campaigns</h3>
                    <div className="w-20"></div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                    {DRIP_CAMPAIGNS.map(campaign => (
-                     <div 
-                        key={campaign.id} 
-                        onClick={() => handleDripSelection(campaign)}
-                        className="bg-slate-50 border border-slate-100 p-8 rounded-[2.5rem] hover:bg-white hover:border-indigo-400 hover:shadow-xl transition-all group cursor-pointer text-left flex flex-col justify-between"
-                      >
+                     <div key={campaign.id} onClick={() => handleDripSelection(campaign)} className="bg-slate-50 border border-slate-100 p-8 rounded-[2.5rem] hover:bg-white hover:border-indigo-400 transition-all group cursor-pointer text-left flex flex-col justify-between">
                         <div className="space-y-6">
-                           <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 text-xl shadow-sm group-hover:scale-110 transition-transform">
-                              <i className={`fas ${campaign.icon}`}></i>
-                           </div>
-                           <div className="space-y-2">
-                              <h4 className="text-lg font-black text-slate-900 tracking-tight">{campaign.label}</h4>
-                              <p className="text-sm text-slate-500 font-semibold leading-relaxed">{campaign.desc}</p>
-                           </div>
+                           <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 text-xl shadow-sm"><i className={`fas ${campaign.icon}`}></i></div>
+                           <div><h4 className="text-lg font-black text-slate-900 tracking-tight">{campaign.label}</h4><p className="text-sm text-slate-500 font-semibold leading-relaxed">{campaign.desc}</p></div>
                         </div>
                         <div className="mt-8 pt-6 border-t border-slate-200/60 flex items-center justify-between">
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{campaign.touchpoints.length} Touchpoints</span>
-                           <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Customize Sequence</button>
+                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{campaign.touchpoints.length} Steps</span>
+                           <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">Select Sequence</span>
                         </div>
                      </div>
                    ))}
@@ -636,44 +572,24 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
             ) : (
               <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500 text-left max-w-6xl mx-auto">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-8">
-                   <button onClick={() => setEmailSubView('DRIP_TEMPLATES')} className="flex items-center space-x-2 text-slate-400 hover:text-indigo-600 transition-colors font-black uppercase tracking-widest text-[10px]">
-                      <i className="fas fa-arrow-left"></i>
-                      <span>Back to Templates</span>
-                   </button>
-                   <div>
-                     <h3 className="text-3xl font-black text-slate-900 tracking-tight">{selectedDrip?.label}</h3>
-                     <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sequence Editor & Preview</p>
-                   </div>
-                   <button onClick={() => { alert('Drip Campaign Active!\nRecipients are being queued for immediate processing.'); setEmailSubView('MENU'); }} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-indigo-100">Launch Campaign</button>
+                   <button onClick={() => setEmailSubView('DRIP_TEMPLATES')} className="flex items-center space-x-2 text-slate-400 hover:text-indigo-600 transition-colors font-black uppercase tracking-widest text-[10px]"><i className="fas fa-arrow-left"></i><span>Back</span></button>
+                   <div><h3 className="text-3xl font-black text-slate-900 tracking-tight">{selectedDrip?.label}</h3><p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-1">Sequence Editor</p></div>
+                   <button onClick={() => { alert('Campaign Launching...'); setEmailSubView('MENU'); }} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px]">Launch Campaign</button>
                 </div>
-
                 <div className="space-y-8">
                   {selectedDrip?.touchpoints.map((tp, idx) => (
                     <div key={tp.id} className="relative pl-12 border-l-2 border-slate-100 pb-8 last:pb-0">
-                       <div className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-white border-4 border-indigo-500 flex items-center justify-center font-black text-[10px] text-indigo-600 shadow-sm">
-                          {idx + 1}
-                       </div>
-                       <div className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 hover:border-indigo-200 transition-all">
+                       <div className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-white border-4 border-indigo-500 flex items-center justify-center font-black text-[10px] text-indigo-600 shadow-sm">{idx + 1}</div>
+                       <div className="bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8">
                           <div className="flex items-center justify-between mb-6">
-                             <div className="space-y-1">
-                               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Day {tp.day === 0 ? 'Immediate' : tp.day}</p>
-                               <h4 className="text-xl font-black text-slate-800">{tp.subject}</h4>
-                             </div>
-                             <div className="flex space-x-2">
-                                <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-indigo-600 transition-all"><i className="fas fa-edit text-xs"></i></button>
-                                <button className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-rose-500 transition-all"><i className="fas fa-trash-alt text-xs"></i></button>
-                             </div>
+                             <div><p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Day {tp.day === 0 ? 'Immediate' : tp.day}</p><h4 className="text-xl font-black text-slate-800">{tp.subject}</h4></div>
                           </div>
                           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-inner font-mono text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                             {tp.content.replace('[Agent Name]', `${currentUser.firstName} ${currentUser.lastName}`)
-                                        .replace('[Brokerage Name]', brokerage.name)}
+                             {tp.content.replace('[Agent Name]', `${currentUser.firstName} ${currentUser.lastName}`).replace('[Brokerage Name]', brokerage.name)}
                           </div>
                        </div>
                     </div>
                   ))}
-                  <button className="w-full py-6 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 hover:border-indigo-400 hover:text-indigo-600 font-black uppercase tracking-[0.2em] text-[10px] transition-all">
-                    + Add New Touchpoint to Sequence
-                  </button>
                 </div>
               </div>
             )}
@@ -687,25 +603,18 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                <StatCard label="Avg Click Rate" value="12.4%" icon="fa-mouse-pointer" color="text-emerald-600 bg-emerald-50" />
                <StatCard label="Leads Generated" value="142" icon="fa-user-plus" color="text-amber-600 bg-amber-50" />
             </div>
-
             <div className="bg-white border border-slate-200 rounded-[3rem] overflow-hidden shadow-sm">
                <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-xl font-black text-slate-800 tracking-tight">Active Campaigns</h3>
-                  <div className="flex items-center space-x-3">
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sort by:</span>
-                     <button onClick={() => alert("Opening Sort Options...")} className="text-xs font-bold text-slate-600 flex items-center space-x-2"><span>Date Created</span><i className="fas fa-chevron-down text-[8px]"></i></button>
-                  </div>
                </div>
                <div className="divide-y divide-slate-100">
                   {[1, 2, 3].map(i => (
                     <div key={i} className="p-8 hover:bg-slate-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6 group">
                        <div className="flex items-center space-x-6">
-                          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 font-black text-lg group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                             #{i}
-                          </div>
+                          <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 font-black text-lg group-hover:bg-indigo-100 transition-colors">#{i}</div>
                           <div>
                              <h4 className="text-lg font-black text-slate-800 tracking-tight">Just Listed Blitz: {i === 1 ? '1725 Slough Ave' : i === 2 ? '42 Wallaby Way' : '10 Downing Street'}</h4>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status: <span className="text-emerald-500">Live • Tracking Insights</span></p>
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status: <span className="text-emerald-500">Live • Tracking</span></p>
                           </div>
                        </div>
                        <div className="flex items-center space-x-12 pr-10">
@@ -713,11 +622,7 @@ const MarketingView: React.FC<MarketingViewProps> = ({ currentUser, brokerage, l
                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Impressions</p>
                              <p className="text-lg font-black text-slate-800">{Math.floor(Math.random() * 15000 + 5000).toLocaleString()}</p>
                           </div>
-                          <div className="text-center">
-                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Engagements</p>
-                             <p className="text-lg font-black text-slate-800">{Math.floor(Math.random() * 1000 + 100).toLocaleString()}</p>
-                          </div>
-                          <button onClick={() => alert("Fetching detailed analytics visualization...")} className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-indigo-600 hover:border-indigo-400 shadow-sm transition-all"><i className="fas fa-chart-pie"></i></button>
+                          <button onClick={() => alert("Fetching detailed analytics...")} className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center hover:text-indigo-600 transition-all"><i className="fas fa-chart-pie"></i></button>
                        </div>
                     </div>
                   ))}

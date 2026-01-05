@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { OpenHouse, Lead, LeadStatus, LeadTemperature, Task, User } from '../types';
+import { OpenHouse, Lead, LeadStatus, LeadTemperature, Task, User } from '../types.ts';
 
 interface OpenHousePublicFormProps {
   openHouse: OpenHouse;
@@ -56,7 +56,7 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
       tags.push('Real Estate Agent');
       if (formData.clientName) tags.push('Agent Accompanied');
     } else {
-      tags.push(leadTypeMap[formData.type]);
+      tags.push(leadTypeMap[formData.type] || 'BUYER');
     }
 
     const newLead: Lead = {
@@ -75,7 +75,7 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
       propertyAddress: openHouse.address,
       budget: formMode === 'AGENT' ? 0 : (parseInt(formData.priceRange.replace(/[^0-9]/g, '')) || 0),
       notes: [{
-        id: 'n_initial',
+        id: `n_initial_${Date.now()}`,
         content: formMode === 'AGENT' 
           ? `Agent Signed In: ${formData.fullName} from ${formData.agentBrokerage}. Client: ${formData.clientName || 'Not specified'}. Notes: ${formData.notes}`
           : `Visitor Checked In: ${openHouse.address}. Working with Agent: ${formData.workingWithAgent}. Timeline: ${formData.timeline}. Notes: ${formData.notes}`,
@@ -85,7 +85,7 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
       }],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      estimatedDealValue: 0,
+      estimatedDealValue: formMode === 'AGENT' ? 0 : (parseInt(formData.priceRange.replace(/[^0-9]/g, '')) || 0) * 0.03,
       openHouseId: openHouse.id,
       checkInTime: new Date().toISOString()
     };
@@ -171,7 +171,7 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
           </p>
         </div>
 
-        {/* QR Code Quick In Section - Moved to top below address */}
+        {/* QR Code Quick In Section */}
         {formMode === 'VISITOR' && (
           <div className="w-full max-w-lg mb-12 bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-700 rounded-[3rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-3xl shadow-indigo-200/50 relative overflow-hidden group animate-in zoom-in-95 duration-700">
             <div className="absolute top-0 right-0 w-[20rem] h-[20rem] bg-white/10 rounded-full -mr-24 -mt-24 blur-[60px] transition-transform group-hover:scale-125 duration-1000"></div>
@@ -179,7 +179,7 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
             <div className="flex-1 pr-4 text-center md:text-left mb-6 md:mb-0 relative z-10 space-y-3">
               <h4 className="text-xl font-black text-white tracking-tight">Fast Mobile Check-In</h4>
               <p className="text-sm text-indigo-50 font-medium leading-relaxed max-w-[220px] mx-auto md:mx-0">
-                Scan this QR code with your phone to check in from your mobile phone.
+                Scan this QR code with your phone to check in from your mobile device.
               </p>
               <div className="flex items-center justify-center md:justify-start space-x-2 text-indigo-200">
                 <i className="fas fa-mobile-screen-button text-base animate-bounce"></i>
@@ -234,7 +234,6 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
                   <Select icon="fa-vault" label="Target Price Range" value={formData.priceRange} onChange={(v: string) => setFormData({...formData, priceRange: v})} options={['$250k - $500k', '$500k - $750k', '$750k - $1M', '$1M+']} />
                 </div>
 
-                {/* Adjusted Box size and font to fit question on one line - Changed text to "Real Estate Agent" */}
                 <div className="p-8 bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-[2.5rem] border-2 border-indigo-100/50 max-w-3xl mx-auto shadow-sm">
                   <label className="block text-lg font-black text-slate-900 uppercase tracking-widest mb-6 text-center whitespace-nowrap">Are you currently working with a Real Estate Agent?</label>
                   <div className="flex space-x-6 max-w-md mx-auto">
@@ -314,14 +313,12 @@ const OpenHousePublicForm: React.FC<OpenHousePublicFormProps> = ({ openHouse, on
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 mr-3 shrink-0"></span>
                   <span><strong>Agency Relationships:</strong> By checking in, you acknowledge that the host represents the seller's interests in this property. No agent-client relationship is formed between you and the host by this registration alone unless otherwise agreed in writing.</span>
                 </p>
-                
               </div>
               <div className="space-y-4">
                 <p className="flex items-start">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 mr-3 shrink-0"></span>
                   <span><strong>TCPA Compliance:</strong> By providing your phone number and email, you provide your express written consent to be contacted by our brokerage and its agents regarding real estate services via call, SMS, or email, including the use of automated technology.</span>
                 </p>
-                
               </div>
             </div>
           </div>

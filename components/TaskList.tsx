@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Task, Lead, User } from '../types';
+import { Task, Lead, User } from '../types.ts';
 
 interface TaskListProps {
   tasks: Task[];
@@ -70,7 +70,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
       const term = searchTerm.toLowerCase();
       result = result.filter(t => 
         t.title.toLowerCase().includes(term) || 
-        t.description.toLowerCase().includes(term)
+        (t.description && t.description.toLowerCase().includes(term))
       );
     }
 
@@ -125,7 +125,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedTasks.length) {
+    if (selectedIds.length === paginatedTasks.length && paginatedTasks.length > 0) {
       setSelectedIds([]);
     } else {
       setSelectedIds(paginatedTasks.map(t => t.id));
@@ -305,7 +305,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
         </div>
         <div className="flex items-center space-x-3">
           {selectedIds.length > 0 && (
-            <div className="flex items-center bg-white border border-indigo-100 rounded-2xl p-1.5 shadow-sm animate-in zoom-in-95 duration-200">
+            <div className="flex items-center bg-white border border-indigo-100 rounded-2xl p-1.5 shadow-sm animate-in zoom-in-95 duration-200 text-[12px]">
                <button 
                  onClick={handleBulkComplete}
                  className="px-5 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all flex items-center space-x-2"
@@ -404,8 +404,8 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
               const associatedLead = leads.find(l => l.id === task.leadId);
               
               return (
-                <tr key={task.id} className={`hover:bg-indigo-50/30 transition-all group ${isSelected ? 'bg-indigo-50/20' : ''}`}>
-                  <td className="px-8 py-6 text-center">
+                <tr key={task.id} className={`hover:bg-indigo-50/30 transition-all group ${isSelected ? 'bg-indigo-50/20' : ''} cursor-pointer`} onClick={() => handleEditTask(task)}>
+                  <td className="px-8 py-6 text-center" onClick={e => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
                       checked={isSelected}
@@ -454,7 +454,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
                       </span>
                     )}
                   </td>
-                  <td className="px-8 py-6 text-right">
+                  <td className="px-8 py-6 text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end space-x-2">
                       {!task.isCompleted && (
                         <button 
@@ -462,7 +462,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
                           className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 shadow-sm"
                           title="Complete Task"
                         >
-                          <i className="fas fa-check"></i>
+                          <i className="fas fa-check text-xs"></i>
                         </button>
                       )}
                       <button 
@@ -524,7 +524,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
               onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollToTop(); }} 
               className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all"
             >
-              <i className="fas fa-chevron-left"></i>
+              <i className="fas fa-chevron-left text-xs"></i>
             </button>
             <div className="text-xs font-black text-slate-700 uppercase tracking-[0.2em] px-4">
               Page {currentPage} of {totalPages || 1}
@@ -534,7 +534,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
               onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} 
               className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all"
             >
-              <i className="fas fa-chevron-right"></i>
+              <i className="fas fa-chevron-right text-xs"></i>
             </button>
           </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -558,7 +558,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setTaskToComplete(null)}
           ></div>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 relative z-10 animate-in zoom-in-95 duration-200 text-center">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 relative z-10 animate-in zoom-in-95 duration-200 text-center text-[12px]">
             <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center text-3xl mx-auto mb-8 shadow-inner border border-emerald-100">
               <i className="fas fa-check-double"></i>
             </div>
@@ -578,9 +578,9 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
       {taskToDelete && (
         <div className="fixed inset-0 z-[510] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setTaskToDelete(null)}></div>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 relative z-10 animate-in zoom-in-95 duration-200 text-center">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 relative z-10 animate-in zoom-in-95 duration-200 text-center text-[12px]">
             <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-[2rem] flex items-center justify-center text-3xl mx-auto mb-8 shadow-inner border border-rose-100">
-              <i className="fas fa-trash-can"></i>
+              <i className="fas fa-trash-can text-3xl"></i>
             </div>
             <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Trash Item?</h3>
             <p className="text-slate-500 mb-10 font-medium leading-relaxed">The selected task will be moved to the archival storage.</p>
@@ -596,9 +596,9 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
       {isBulkDeleteModalOpen && (
         <div className="fixed inset-0 z-[510] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsBulkDeleteModalOpen(false)}></div>
-          <div className="bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-md relative z-10 p-12 text-center animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-md relative z-10 p-12 text-center animate-in zoom-in-95 duration-200 text-[12px]">
              <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">
-                <i className="fas fa-trash-can"></i>
+                <i className="fas fa-trash-can text-4xl"></i>
              </div>
              <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Bulk Removal?</h3>
              <p className="text-slate-500 font-semibold leading-relaxed mb-10">
@@ -708,7 +708,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, leads, user, onUpdateTask, o
 
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Procedural Notes</label>
-                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-6 font-bold text-base outline-none min-h-[160px] resize-none focus:bg-white focus:border-indigo-500 transition-all shadow-inner" placeholder="Detailed instructions for the deliverable..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-[1.5rem] px-8 py-6 font-bold text-base outline-none min-h-[160px] resize-none focus:bg-white focus:border-indigo-500 transition-all shadow-inner" placeholder="Detailed instructions for the deliverable..." value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} />
               </div>
 
               <div className="pt-8 border-t border-slate-100 flex space-x-6">

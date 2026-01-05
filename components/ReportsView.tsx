@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Lead, Deal, User, UserRole } from '../types';
+import { Lead, Deal, User, UserRole } from '../types.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
 interface ReportsViewProps {
@@ -200,7 +200,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      {/* Main Standard Dashboard View */}
+      {/* Filters Toolbar */}
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -274,6 +274,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
         </div>
       </div>
 
+      {/* Stats Cards - Smaller Sizing */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Closed Volume" value={`$${stats.totalVolume.toLocaleString()}`} comparison={showYoYComparison ? getDiffPercent(stats.totalVolume, prevYearStats.totalVolume) : undefined} prevValue={`$${prevYearStats.totalVolume.toLocaleString()}`} icon="fa-house-circle-check" color="text-indigo-600 bg-indigo-50" />
         <StatCard label="Closed Units" value={`${stats.units}`} comparison={showYoYComparison ? getDiffPercent(stats.units, prevYearStats.units) : undefined} prevValue={`${prevYearStats.units}`} icon="fa-key" color="text-emerald-600 bg-emerald-50" />
@@ -281,6 +282,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
         <StatCard label="Conversion Rate" value={`${stats.conversion.toFixed(1)}%`} comparison={showYoYComparison ? getDiffPercent(stats.conversion, prevYearStats.conversion) : undefined} prevValue={`${prevYearStats.conversion.toFixed(1)}%`} icon="fa-arrow-up-right-dots" color="text-blue-600 bg-blue-50" />
       </div>
 
+      {/* Main Charts Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[2.5rem] p-12 shadow-sm">
            <div className="flex items-center justify-between mb-12">
@@ -346,7 +348,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
                 <div className="flex items-center space-x-3">
                   <span className="text-[14px] font-black text-slate-900">{s.value}</span>
                   <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${(s.value / baseLeads.length) * 100}%`, backgroundColor: COLORS[i % COLORS.length] }}></div>
+                    <div className="h-full rounded-full" style={{ width: `${(s.value / Math.max(1, baseLeads.length)) * 100}%`, backgroundColor: COLORS[i % COLORS.length] }}></div>
                   </div>
                 </div>
               </div>
@@ -359,20 +361,26 @@ const ReportsView: React.FC<ReportsViewProps> = ({ leads, deals, agents, current
 };
 
 const StatCard = ({ label, value, comparison, prevValue, icon, color }: any) => {
-  const isPositive = comparison > 0;
-  const isNegative = comparison < 0;
+  const isPositive = (comparison || 0) > 0;
+  const isNegative = (comparison || 0) < 0;
   return (
-    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm group hover:border-indigo-300 transition-all flex flex-col justify-between h-full relative overflow-hidden">
-      <div className="flex items-center justify-between mb-8 relative z-10">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${color}`}><i className={`fas ${icon} text-base`}></i></div>
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm group hover:border-indigo-300 transition-all flex flex-col justify-between h-full relative overflow-hidden text-[12px]">
+      <div className="flex items-center justify-between mb-4 relative z-10">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${color}`}><i className={`fas ${icon} text-sm`}></i></div>
         {comparison !== undefined && (
-          <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter shadow-sm border ${isPositive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : isNegative ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}><i className={`fas ${isPositive ? 'fa-arrow-trend-up' : isNegative ? 'fa-arrow-trend-down' : 'fa-minus'}`}></i><span>{Math.abs(comparison).toFixed(1)}%</span></div>
+          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm border ${isPositive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : isNegative ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}><i className={`fas ${isPositive ? 'fa-arrow-trend-up' : isNegative ? 'fa-arrow-trend-down' : 'fa-minus'}`}></i><span>{Math.abs(comparison).toFixed(1)}%</span></div>
         )}
       </div>
       <div className="relative z-10">
-        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.25em] mb-2">{label}</p>
-        <p className="text-3xl font-black text-slate-900 tracking-tight">{value}</p>
-        {comparison !== undefined && (<div className="mt-5 pt-5 border-t border-slate-50"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Previous: <span className="text-slate-600 ml-1">{prevValue}</span></p></div>)}
+        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">{label}</p>
+        <p className="text-2xl font-black text-slate-900 tracking-tight">{value}</p>
+        {comparison !== undefined && (
+          <div className="mt-3 pt-3 border-t border-slate-50">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+              Prev: <span className="text-slate-600 ml-1">{prevValue}</span>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

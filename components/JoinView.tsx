@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { User, UserRole, Brokerage } from '../types';
-import { Invitation } from '../App';
+import { User, UserRole, Brokerage } from '../types.ts';
+import { Invitation } from '../App.tsx';
 
 interface JoinViewProps {
   invitation: Invitation;
@@ -15,8 +15,10 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
     phone: '',
     licenseNumber: '',
     avatar: `https://picsum.photos/seed/${Math.random()}/400`,
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,6 +62,11 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
     const newUser: User = {
       id: `user_${Date.now()}`,
       brokerageId: brokerage.id,
@@ -86,7 +93,7 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
       </div>
 
       <div className="w-full max-w-4xl relative z-10 animate-in fade-in zoom-in-95 duration-700 flex flex-col md:flex-row bg-white rounded-[3rem] shadow-[0_48px_96px_-12px_rgba(0,0,0,0.5)] overflow-hidden">
-        {/* Left Side: Welcome */}
+        {/* Left Side: Welcome Panel */}
         <div className="w-full md:w-80 bg-indigo-600 p-12 text-white flex flex-col justify-between">
            <div className="space-y-8">
               <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-2xl shadow-xl">
@@ -113,17 +120,19 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-10">
+            {/* Avatar Upload */}
             <div className="flex flex-col items-center space-y-4">
                <div className="relative group">
-                  <img src={formData.avatar} className="w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-xl" alt="Profile" />
+                  <img src={formData.avatar} className={`w-32 h-32 rounded-[2.5rem] object-cover ring-8 ring-slate-50 shadow-xl transition-all ${isProcessing ? 'opacity-50 blur-[2px]' : ''}`} alt="Profile" />
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer">
-                    <i className="fas fa-camera text-2xl mb-1"></i>
+                  <button type="button" disabled={isProcessing} onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-slate-900/60 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer z-20">
+                    <i className={`fas ${isProcessing ? 'fa-circle-notch fa-spin' : 'fa-camera'} text-2xl mb-1`}></i>
                     <span className="text-[10px] font-black uppercase tracking-widest">Upload Photo</span>
                   </button>
                </div>
             </div>
 
+            {/* Form Fields */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">First Name</label>
@@ -146,14 +155,26 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Set Secure Password</label>
-              <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" placeholder="••••••••" />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Set Secure Password</label>
+                <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" placeholder="••••••••" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm Password</label>
+                <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10" placeholder="••••••••" />
+              </div>
             </div>
 
-            <button type="submit" className="w-full py-6 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3">
-               <span>Complete Professional Setup</span>
-               <i className="fas fa-chevron-right"></i>
+            <button type="submit" disabled={isProcessing} className="w-full py-6 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-[0.98]">
+               {isProcessing ? (
+                 <i className="fas fa-circle-notch fa-spin"></i>
+               ) : (
+                 <>
+                   <span>Complete Professional Setup</span>
+                   <i className="fas fa-chevron-right"></i>
+                 </>
+               )}
             </button>
           </form>
         </div>

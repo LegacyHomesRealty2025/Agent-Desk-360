@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Lead, LeadStatus, LeadTemperature } from '../types';
+import { Lead, LeadStatus, LeadTemperature } from '../types.ts';
 
 interface ContactListProps {
   leads: Lead[];
@@ -606,7 +606,7 @@ const ContactList: React.FC<ContactListProps> = ({
             placeholder="Search by name, email, secondary contact or address..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white focus:border-indigo-500 transition-all shadow-inner font-bold" 
+            className="w-full pl-12 pr-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-inner font-bold" 
           />
         </div>
         
@@ -667,7 +667,6 @@ const ContactList: React.FC<ContactListProps> = ({
             )}
           </div>
 
-          {/* Integrated DELETE Button at the Top Right as shown in screenshot */}
           {selectedIds.length > 0 && (
             <button 
               onClick={handleBulkDeleteClick}
@@ -803,7 +802,7 @@ const ContactList: React.FC<ContactListProps> = ({
         </div>
       )}
 
-      {/* Bulk Delete Modal - As requested in the screenshot/prompt */}
+      {/* Bulk Delete Modal */}
       {isBulkDeleteModalOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsBulkDeleteModalOpen(false)}></div>
@@ -851,7 +850,6 @@ const ContactList: React.FC<ContactListProps> = ({
             </div>
             
             <form onSubmit={handleEditSubmit} className="space-y-8">
-              {/* PRIMARY SECTION */}
               <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
                 <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
                   <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-sm shadow-lg shadow-indigo-100"><i className="fas fa-user"></i></div>
@@ -896,7 +894,6 @@ const ContactList: React.FC<ContactListProps> = ({
                 </div>
               </div>
 
-              {/* CONTACT DATA SECTION */}
               <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
                 <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
                   <div className="w-10 h-10 bg-slate-800 text-white rounded-xl flex items-center justify-center text-sm shadow-lg"><i className="fas fa-chart-line"></i></div>
@@ -1003,7 +1000,6 @@ const ContactList: React.FC<ContactListProps> = ({
                 </div>
               </div>
 
-              {/* SECONDARY CONTACT SECTION */}
               <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-8">
                 <div className="flex items-center space-x-3 border-b border-slate-200 pb-5 mb-4">
                   <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-sm shadow-md"><i className="fas fa-user-plus"></i></div>
