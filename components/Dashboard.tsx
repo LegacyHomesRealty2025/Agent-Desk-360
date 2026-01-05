@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Lead, User, Deal, UserRole, OpenHouse, Task, LeadStatus } from '../types.ts';
+import { Lead, User, Deal, UserRole, OpenHouse, Task, LeadStatus, YearlyGoal } from '../types.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
 
 interface DashboardProps {
@@ -15,6 +15,8 @@ interface DashboardProps {
   toggleDarkMode?: () => void;
   viewingAgentId: string;
   onSetViewingAgentId: (id: string) => void;
+  goals: YearlyGoal[];
+  onUpdateGoal: (goal: YearlyGoal) => void;
 }
 
 const TZ = 'America/Los_Angeles';
@@ -69,7 +71,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   isDarkMode, 
   toggleDarkMode,
   viewingAgentId,
-  onSetViewingAgentId
+  onSetViewingAgentId,
+  goals,
+  onUpdateGoal
 }) => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [chartView, setChartView] = useState<ChartView>('VOLUME');
@@ -149,6 +153,18 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const activeListingVolume = activeDeals.reduce((sum, d) => sum + d.salePrice, 0);
   const pendingListingVolume = pendingDeals.reduce((sum, d) => sum + d.salePrice, 0);
+
+  // Goal calculation for GCI tracking
+  const activeGoal = useMemo(() => 
+    goals.find(g => g.userId === viewingAgentId && g.year === currentYear) || 
+    { userId: viewingAgentId, year: currentYear, volumeTarget: 1000000, unitTarget: 10, gciTarget: 30000 },
+  [goals, viewingAgentId, currentYear]);
+
+  const commissionProgress = {
+    active: Math.min(100, (activeComm / activeGoal.gciTarget) * 100),
+    pending: Math.min(100, (pendingComm / activeGoal.gciTarget) * 100),
+    earned: Math.min(100, (earnedComm / activeGoal.gciTarget) * 100),
+  };
 
   // Monthly Production logic for comparison
   const monthlyData = useMemo(() => {
@@ -394,29 +410,37 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between h-[380px] group border transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
             <div>
               <h3 className="text-lg font-black mb-1">Commission Tracking</h3>
-              <p className="text-[11px] text-slate-400 font-semibold mb-8">Estimated Gross Commission Income (GCI).</p>
-              <div className="space-y-6 mb-4">
+              <p className="text-[11px] text-slate-400 font-semibold mb-6">Estimated Gross Commission Income (GCI).</p>
+              <div className="space-y-4 mb-4">
                 <div className="space-y-2">
                    <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                     <span>Earnings Consistency</span>
-                     <span className={`${isDarkMode ? 'text-slate-200' : 'text-slate-800'} font-black`}>75%</span>
+                     <span>Active Pipeline</span>
+                     <span className={`${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'} font-black`}>{commissionProgress.active.toFixed(1)}%</span>
                    </div>
                    <div className={`h-2.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                    <div className="h-full bg-indigo-600 rounded-full shadow-lg shadow-indigo-500/30" style={{ width: '75%' }}></div>
+                    <div className="h-full bg-indigo-600 rounded-full shadow-lg shadow-indigo-500/30 transition-all duration-1000" style={{ width: `${commissionProgress.active}%` }}></div>
                   </div>
                 </div>
                 <div className="space-y-2">
                    <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                     <span>Target Pace</span>
-                     <span className={`${isDarkMode ? 'text-slate-200' : 'text-slate-800'} font-black`}>65%</span>
+                     <span>Pending Escrow</span>
+                     <span className={`${isDarkMode ? 'text-amber-400' : 'text-amber-600'} font-black`}>{commissionProgress.pending.toFixed(1)}%</span>
                    </div>
                    <div className={`h-2.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                    <div className="h-full bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/30" style={{ width: '65%' }}></div>
+                    <div className="h-full bg-amber-500 rounded-full shadow-lg shadow-amber-500/30 transition-all duration-1000" style={{ width: `${commissionProgress.pending}%` }}></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                     <span>Earned GCI</span>
+                     <span className={`${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'} font-black`}>{commissionProgress.earned.toFixed(1)}%</span>
+                   </div>
+                   <div className={`h-2.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                    <div className="h-full bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/30 transition-all duration-1000" style={{ width: `${commissionProgress.earned}%` }}></div>
                   </div>
                 </div>
               </div>
             </div>
-            {/* UPDATED: Box order to Active, Pending, Earned with theme-consistent colors */}
             <div className="w-full grid grid-cols-3 gap-3 mt-auto">
               <div className={`p-3 rounded-xl border text-center transition-all ${isDarkMode ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-100'}`}>
                 <p className={`text-[9px] font-black uppercase mb-1 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>ACTIVE</p>
