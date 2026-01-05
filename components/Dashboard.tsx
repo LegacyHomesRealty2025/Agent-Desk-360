@@ -416,18 +416,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
             </div>
+            {/* UPDATED: Box order to Active, Pending, Earned with theme-consistent colors */}
             <div className="w-full grid grid-cols-3 gap-3 mt-auto">
-              <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">EARNED</p>
-                <p className="text-11px font-black truncate">${earnedComm.toLocaleString()}</p>
+              <div className={`p-3 rounded-xl border text-center transition-all ${isDarkMode ? 'bg-indigo-900/20 border-indigo-500/30' : 'bg-indigo-50 border-indigo-100'}`}>
+                <p className={`text-[9px] font-black uppercase mb-1 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>ACTIVE</p>
+                <p className={`text-11px font-black truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>${activeComm.toLocaleString()}</p>
               </div>
-              <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">PENDING</p>
-                <p className="text-11px font-black truncate">${pendingComm.toLocaleString()}</p>
+              <div className={`p-3 rounded-xl border text-center transition-all ${isDarkMode ? 'bg-amber-900/20 border-amber-500/30' : 'bg-amber-50 border-amber-100'}`}>
+                <p className={`text-[9px] font-black uppercase mb-1 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>PENDING</p>
+                <p className={`text-11px font-black truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>${pendingComm.toLocaleString()}</p>
               </div>
-              <div className={`p-3 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">ACTIVE</p>
-                <p className="text-11px font-black truncate">${activeComm.toLocaleString()}</p>
+              <div className={`p-3 rounded-xl border text-center transition-all ${isDarkMode ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-emerald-50 border-emerald-100'}`}>
+                <p className={`text-[9px] font-black uppercase mb-1 ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>EARNED</p>
+                <p className={`text-11px font-black truncate ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>${earnedComm.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -688,7 +689,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Role</label>
-                    <select value={inviteRole} onChange={e => setInviteRole(e.target.value as UserRole)} className={`w-full border rounded-2xl px-5 py-4 font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`}>
+                    <select value={inviteRole} onChange={e => setInviteRole(e.target.value as UserRole)} className={`w-full border rounded-2xl px-5 py-4 font-bold outline-none cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
                       <option value={UserRole.AGENT}>Real Estate Agent</option>
                       <option value={UserRole.BROKER}>Broker / Admin</option>
                     </select>
