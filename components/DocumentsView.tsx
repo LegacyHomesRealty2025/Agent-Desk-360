@@ -272,7 +272,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                  className={`w-full flex items-center px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden ${
                    !selectedFolderId 
                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/50' 
-                     : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5'
+                     : 'text-slate-50 hover:bg-slate-50 dark:hover:bg-white/5'
                  }`}
                >
                   <i className={`fas fa-layer-group w-8 text-[18px] ${!selectedFolderId ? 'text-white' : 'text-indigo-400'}`}></i>
@@ -293,7 +293,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       className={`w-full flex items-center px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden ${
                         isSelected 
                           ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/50' 
-                          : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5'
+                          : 'text-slate-50 hover:bg-slate-50 dark:hover:bg-white/5'
                       }`}
                     >
                         <i className={`fas ${folder.icon} w-8 text-[18px] ${isSelected ? 'text-white' : 'text-indigo-400'}`}></i>
@@ -321,15 +321,16 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             </nav>
           </div>
 
-          <div className="bg-slate-900 p-10 rounded-[3rem] text-white space-y-6 relative overflow-hidden shadow-2xl">
+          {/* Shrunk Information Box */}
+          <div className="bg-slate-900 p-6 rounded-3xl text-white space-y-3 relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
             <div className="relative z-10 flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                 <i className="fas fa-shield-halved text-indigo-400 text-lg"></i>
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                 <i className="fas fa-shield-halved text-indigo-400 text-base"></i>
               </div>
-              <h5 className="font-black text-xs uppercase tracking-widest">Internal Use</h5>
+              <h5 className="font-black text-[10px] uppercase tracking-widest">Internal Use</h5>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed relative z-10 font-medium">
+            <p className="text-[10px] text-slate-400 leading-relaxed relative z-10 font-medium">
               Files are for internal brokerage use only. Please do not share public training links with external parties.
             </p>
           </div>
@@ -415,7 +416,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
               <div className={`rounded-[2.5rem] border shadow-sm overflow-hidden overflow-x-auto transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className={`border-b ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                    <tr className={`border-b ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resource Name</th>
                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Format</th>
                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Shared By</th>
