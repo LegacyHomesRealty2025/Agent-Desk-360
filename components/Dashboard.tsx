@@ -13,10 +13,11 @@ interface DashboardProps {
   onInviteUser?: (email: string, role: UserRole) => string;
   isDarkMode?: boolean;
   toggleDarkMode?: () => void;
-  viewingAgentId: string;
+ ViewViewingAgentId: string;
   onSetViewingAgentId: (id: string) => void;
   goals: YearlyGoal[];
   onUpdateGoal: (goal: YearlyGoal) => void;
+  viewingAgentId: string;
 }
 
 const TZ = 'America/Los_Angeles';
@@ -53,6 +54,26 @@ const CustomTooltip = ({ active, payload, label, chartView, isDarkMode }: any) =
         <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">{label}</p>
         {renderData(data.curVol, data.curUnits)}
         {isCompare && renderData(data.preVol, data.preUnits, true)}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Enhanced Custom Pie Tooltip for Lead Source Mix
+const CustomPieTooltip = ({ active, payload, isDarkMode }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className={`p-6 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border-2 animate-in fade-in zoom-in-95 duration-200 z-[1000] ${isDarkMode ? 'bg-slate-900 border-indigo-500/30 text-white' : 'bg-white border-indigo-100 text-slate-900'}`}>
+        <div className="flex items-center space-x-3 mb-3">
+          <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: payload[0].payload.fill || payload[0].fill }}></div>
+          <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">{data.name}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-2xl font-black text-indigo-600 leading-none">{data.value}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Active Leads</p>
+        </div>
       </div>
     );
   }
@@ -354,7 +375,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Box 1: Pipeline Volume */}
-          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center group relative overflow-hidden h-[380px] border transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
+          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center group relative overflow-hidden h-[380px] border transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
             <h3 className="text-lg font-black self-start mb-1">Pipeline Volume</h3>
             <div className="relative h-48 w-full flex items-center justify-center overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
@@ -407,7 +428,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Box 2: Commission Tracking */}
-          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between h-[380px] group border transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
+          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between h-[380px] group border transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
             <div>
               <h3 className="text-lg font-black mb-1">Commission Tracking</h3>
               <p className="text-[11px] text-slate-400 font-semibold mb-6">Estimated Gross Commission Income (GCI).</p>
@@ -458,7 +479,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Box 3: Daily Schedule */}
-          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col h-[380px] group border transition-all relative ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`}>
+          <div className={`rounded-[2.5rem] p-8 shadow-sm flex flex-col h-[380px] group border transition-all relative ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
              <div className="flex items-center justify-between mb-6">
                <h3 className="text-lg font-black">Daily Schedule</h3>
                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xs shadow-sm transition-all">
@@ -564,9 +585,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   cursor={{fill: isDarkMode ? '#ffffff05' : '#f8fafc'}} 
                   content={<CustomTooltip chartView={chartView} isDarkMode={isDarkMode} />}
                 />
+                {/* Fixed: Replaced undefined showYoYComparison with compareLastYear */}
                 {compareLastYear && (
                   <Bar dataKey="previous" fill={isDarkMode ? '#1e293b' : '#e2e8f0'} radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30} />
                 )}
+                {/* Fixed: Replaced undefined showYoYComparison with compareLastYear */}
                 <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30}>
                     {monthlyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={index === currentLAMonthIdx ? '#6366f1' : isDarkMode ? '#475569' : '#1e293b'} />
@@ -642,7 +665,7 @@ const Dashboard: React.FC<DashboardProps> = ({
              <div className="mt-8 pt-6 border-t border-slate-100">
                 <button 
                   onClick={() => onNavigate('reports')}
-                  className="w-full py-4 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-black transition-all flex items-center justify-center space-x-3"
+                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center justify-center space-x-3"
                 >
                    <span>Full Team Analytics</span>
                    <i className="fas fa-arrow-right text-[9px]"></i>
@@ -654,17 +677,17 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
-           {/* Lead Source Mix - CIRCLE DISPLAY */}
-           <div className={`p-10 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-            <h3 className="text-2xl font-black tracking-tight mb-10 leading-none">Lead Source Mix</h3>
-            <div className="flex-1 min-h-[300px] relative mb-10">
+           {/* Lead Source Mix - ENHANCED VISIBILITY */}
+           <div className={`p-6 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <h3 className="text-lg font-black tracking-tight mb-4 leading-none">Lead Source Mix</h3>
+            <div className="flex-1 min-h-[250px] relative mb-6">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie 
                     data={leadSourceData} 
-                    innerRadius={90} 
-                    outerRadius={125} 
-                    paddingAngle={10} 
+                    innerRadius={55} 
+                    outerRadius={80} 
+                    paddingAngle={6} 
                     dataKey="value" 
                     stroke="none"
                     animationBegin={0}
@@ -672,24 +695,28 @@ const Dashboard: React.FC<DashboardProps> = ({
                   >
                     {leadSourceData.map((_, i) => <PieCell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip 
+                    content={<CustomPieTooltip isDarkMode={isDarkMode} />} 
+                    offset={25}
+                    wrapperStyle={{ zIndex: 1000 }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <p className="text-5xl font-black tracking-tighter leading-none">{dashboardLeads.length}</p>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2">TOTAL VOLUME</p>
+                <div className="text-center translate-y-1">
+                  <p className="text-4xl font-black tracking-tighter leading-none">{dashboardLeads.length}</p>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1.5">TOTAL</p>
                 </div>
               </div>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 mt-2">
               {leadSourceData.map((s, i) => (
                 <div key={s.name} className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-4 h-4 rounded-full shadow-sm" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
-                    <span className={`text-[12px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{s.name}</span>
+                    <div className="w-3.5 h-3.5 rounded-full shadow-sm shrink-0" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
+                    <span className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{s.name}</span>
                   </div>
-                  <span className={`text-[12px] font-black ${isDarkMode ? 'text-slate-200' : 'text-slate-900'}`}>{s.value}</span>
+                  <span className={`text-sm font-black ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{s.value}</span>
                 </div>
               ))}
             </div>
