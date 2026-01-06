@@ -138,7 +138,8 @@ export interface Deal {
   escrowEmail?: string;
   escrowFileNumber?: string;
   lenderCompany?: string;
-  lenderPhone?: string;
+  lenderPhone?: string; // office
+  lenderCellPhone?: string;
   lenderEmail?: string;
   lenderLoanOfficer?: string;
   titleCompany?: string;

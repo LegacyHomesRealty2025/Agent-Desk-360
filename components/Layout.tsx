@@ -109,7 +109,7 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-500">
-                <h2 className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">
+                <h2 className="text-[22px] font-black tracking-tighter uppercase whitespace-nowrap">
                   Agent Desk <span className="text-indigo-400">360</span>
                 </h2>
               </div>
@@ -124,7 +124,7 @@ const Layout: React.FC<LayoutProps> = ({
              onClick={() => setIsCollapsed(!isCollapsed)}
            >
               {!isCollapsed && (
-                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">Compact View</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">Compact View</span>
               )}
               <div className={`relative w-9 h-5 rounded-full transition-colors duration-300 shrink-0 ${isCollapsed ? 'bg-indigo-600' : 'bg-slate-700'}`}>
                 <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${isCollapsed ? 'translate-x-4' : 'translate-x-0'}`}></div>
@@ -147,10 +147,10 @@ const Layout: React.FC<LayoutProps> = ({
                   isActive ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/50' : 'hover:bg-white/5 text-slate-400 hover:text-slate-100'
                 }`}
               >
-                <i className={`fas ${item.icon} ${isCollapsed ? 'text-xl' : 'w-8 text-lg'} ${isActive ? 'text-white' : 'group-hover:text-indigo-400'}`}></i>
+                <i className={`fas ${item.icon} ${isCollapsed ? 'text-xl' : 'w-8 text-[20px]'} ${isActive ? 'text-white' : 'group-hover:text-indigo-400'}`}></i>
                 {!isCollapsed && (
                   <div className="flex-1 flex items-center ml-1">
-                    <span className={`text-left font-black text-sm tracking-tight transition-all ${isActive ? 'translate-x-1' : ''}`}>{item.label}</span>
+                    <span className={`text-left font-black text-[12.5px] tracking-tight transition-all ${isActive ? 'translate-x-1' : ''}`}>{item.label}</span>
                     {hasAlert && (
                       <span className="w-2 h-2 bg-orange-500 rounded-full animate-slow-blink shadow-[0_0_12px_rgba(249,115,22,0.8)] shrink-0 ml-2"></span>
                     )}
@@ -176,8 +176,8 @@ const Layout: React.FC<LayoutProps> = ({
                 <i className={`fas ${isViewingAsAgent ? 'fa-arrow-left' : 'fa-user-shield'} text-base`}></i>
                 {!isCollapsed && (
                   <div className="text-left flex-1 overflow-hidden">
-                    <p className="font-black uppercase text-[10px] tracking-widest leading-none">Broker Access</p>
-                    {isViewingAsAgent && <p className="text-[8px] font-bold text-slate-500 uppercase mt-1 truncate">Reset Filters</p>}
+                    <p className="font-black uppercase text-[12px] tracking-widest leading-none">Broker Access</p>
+                    {isViewingAsAgent && <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 truncate">Reset Filters</p>}
                   </div>
                 )}
               </button>
@@ -188,14 +188,14 @@ const Layout: React.FC<LayoutProps> = ({
                   className={`w-full flex items-center space-x-4 p-3.5 rounded-2xl transition-all duration-300 hover:bg-white/10 group ${isCollapsed ? 'justify-center' : ''} ${switchAgentButtonClass}`}
                 >
                   <i className="fas fa-users-between-lines text-base"></i>
-                  {!isCollapsed && <span className="font-black uppercase text-[10px] tracking-widest flex-1 text-left">Agent Hub</span>}
-                  {!isCollapsed && <i className={`fas fa-chevron-up text-[8px] transition-transform duration-300 ${isAgentSwitcherOpen ? 'rotate-180' : ''}`}></i>}
+                  {!isCollapsed && <span className="font-black uppercase text-[12px] tracking-widest flex-1 text-left">Agent Hub</span>}
+                  {!isCollapsed && <i className={`fas fa-chevron-up text-[10px] transition-transform duration-300 ${isAgentSwitcherOpen ? 'rotate-180' : ''}`}></i>}
                 </button>
 
                 {isAgentSwitcherOpen && (
                   <div className="absolute bottom-full left-0 mb-3 w-72 bg-slate-900 border border-white/10 rounded-[1.5rem] shadow-2xl overflow-hidden py-3 z-50 animate-in slide-in-from-bottom-4 duration-300 backdrop-blur-xl">
                     <div className="px-6 py-2 border-b border-white/5 mb-2">
-                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Select Active Profile</p>
+                      <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">Select Active Profile</p>
                     </div>
                     <div className="max-h-64 overflow-y-auto scrollbar-hide px-2 space-y-1">
                       {users.map(agent => (
@@ -206,8 +206,8 @@ const Layout: React.FC<LayoutProps> = ({
                         >
                           <img src={agent.avatar} className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/5" alt="" />
                           <div className="overflow-hidden">
-                            <p className={`text-xs font-black truncate ${user.id === agent.id ? 'text-indigo-400' : 'text-white'}`}>{agent.firstName} {agent.lastName}</p>
-                            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{agent.role}</p>
+                            <p className={`text-[12.5px] font-black truncate ${user.id === agent.id ? 'text-indigo-400' : 'text-white'}`}>{agent.firstName} {agent.lastName}</p>
+                            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest">{agent.role}</p>
                           </div>
                         </button>
                       ))}
@@ -224,11 +224,11 @@ const Layout: React.FC<LayoutProps> = ({
               </div>
               {!isCollapsed && (
                 <div className="flex-1 overflow-hidden animate-in fade-in duration-700">
-                  <p className="font-black text-white truncate text-sm tracking-tight">{user.firstName} {user.lastName}</p>
+                  <p className="font-black text-white truncate text-[12.5px] tracking-tight">{user.firstName} {user.lastName}</p>
                   <div className="flex items-center space-x-2 mt-0.5">
-                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{user.role}</span>
+                    <span className="text-[11px] font-black text-indigo-400 uppercase tracking-widest">{user.role}</span>
                     <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Verified</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Verified</span>
                   </div>
                 </div>
               )}

@@ -24,6 +24,7 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [displayMode, setDisplayMode] = useState<'tile' | 'list'>('tile');
   const [ohToDelete, setOhToDelete] = useState<OpenHouse | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const initialForm: Partial<OpenHouse> = {
     address: '',
@@ -52,6 +53,18 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
       visitors: active.reduce((sum, oh) => sum + (oh.visitorCount || 0), 0)
     };
   }, [openHouses]);
+
+  const activeEvents = useMemo(() => {
+    return openHouses
+      .filter(oh => !oh.isDeleted)
+      .filter(oh => {
+        const term = searchTerm.toLowerCase();
+        return (
+          oh.address.toLowerCase().includes(term) ||
+          oh.assignedAgentName.toLowerCase().includes(term)
+        );
+      });
+  }, [openHouses, searchTerm]);
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -98,35 +111,37 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
     return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
   };
 
-  const activeEvents = openHouses.filter(oh => !oh.isDeleted);
-
   return (
     <div className="space-y-10 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-32 text-[12px]">
       {/* Analytics Dashboard Header */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex items-center justify-between relative overflow-hidden group">
+        <div className="lg:col-span-4 bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group gap-6">
            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-20 -mt-20 blur-3xl transition-transform group-hover:scale-110"></div>
-           <div className="relative z-10">
+           <div className="relative z-10 flex-1">
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Open House Hub</h2>
               <p className="text-slate-500 font-medium mt-1">Manage tours and track real-time visitor conversion.</p>
-              <div className="flex items-center space-x-6 mt-6">
-                 <div className="flex items-center space-x-2 text-indigo-600 font-black">
-                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                    <span className="uppercase tracking-widest">{stats.live} Live Now</span>
-                 </div>
-                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
-                 <div className="text-slate-400 font-black uppercase tracking-widest">{stats.upcoming} Scheduled</div>
+              
+              {/* Search Bar Integration */}
+              <div className="mt-6 relative max-w-md group">
+                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                <input 
+                  type="text" 
+                  placeholder="Search address or agent..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all"
+                />
               </div>
            </div>
            
-           <div className="flex items-center space-x-4 relative z-10">
+           <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10">
               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
                 <button onClick={() => setDisplayMode('tile')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'tile' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tile View"><i className="fas fa-th-large"></i></button>
                 <button onClick={() => setDisplayMode('list')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list-ul"></i></button>
               </div>
               <button 
                 onClick={handleOpenCreate}
-                className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center space-x-3 active:scale-95"
+                className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center space-x-3 active:scale-95 whitespace-nowrap"
               >
                 <i className="fas fa-plus"></i>
                 <span>New Event</span>
@@ -143,16 +158,6 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
               </div>
            </div>
         </div>
-
-        <div className="bg-emerald-600 p-6 rounded-[2.5rem] text-white flex flex-col justify-between group h-32 lg:h-auto">
-           <p className="text-emerald-200 font-black uppercase tracking-[0.2em] text-[10px]">Active Open House</p>
-           <div className="flex items-end justify-between">
-              <p className="text-4xl font-black tracking-tighter">{stats.total}</p>
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-emerald-100 group-hover:scale-110 transition-transform">
-                 <i className="fas fa-door-open text-sm"></i>
-              </div>
-           </div>
-        </div>
       </div>
 
       {/* Main Content Render */}
@@ -161,17 +166,26 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
           {activeEvents.map(oh => (
             <div key={oh.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-6 hover:border-indigo-500 hover:shadow-xl transition-all group relative flex flex-col justify-between min-h-[360px]">
               <div>
-                <div className="flex items-center space-x-2 mb-6">
-                   <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-sm ${
-                     oh.status === 'LIVE' ? 'bg-emerald-500 border-emerald-400 text-white' :
-                     oh.status === 'UPCOMING' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                     'bg-slate-100 text-slate-400 border-slate-200'
-                   }`}>
-                     {oh.status}
-                   </span>
-                   {oh.date2 && (
-                      <span className="px-2 py-1 rounded-full bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest">Double Day</span>
-                   )}
+                <div className="flex items-center justify-between mb-6">
+                   <div className="flex items-center space-x-2">
+                     <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border shadow-sm ${
+                       oh.status === 'LIVE' ? 'bg-emerald-500 border-emerald-400 text-white' :
+                       oh.status === 'UPCOMING' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                       'bg-slate-100 text-slate-400 border-slate-200'
+                     }`}>
+                       {oh.status}
+                     </span>
+                     {oh.date2 && (
+                        <span className="px-2 py-1 rounded-full bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest">Double Day</span>
+                     )}
+                   </div>
+
+                   {/* Fixed Icons - Always Visible on Card */}
+                   <div className="flex space-x-1">
+                    <button onClick={() => onPreviewPublic(oh)} className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Launch Public Sign-In"><i className="fas fa-desktop text-[10px]"></i></button>
+                    <button onClick={() => handleOpenEdit(oh)} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil text-[10px]"></i></button>
+                    <button onClick={() => setOhToDelete(oh)} className="w-8 h-8 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
+                  </div>
                 </div>
 
                 <div className="space-y-3 mb-6">
@@ -197,12 +211,6 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
               </div>
 
               <div className="space-y-4">
-                <div className="flex space-x-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                  <button onClick={() => onPreviewPublic(oh)} className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Launch Public Sign-In"><i className="fas fa-desktop text-[10px]"></i></button>
-                  <button onClick={() => handleOpenEdit(oh)} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil text-[10px]"></i></button>
-                  <button onClick={() => setOhToDelete(oh)} className="w-8 h-8 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
-                </div>
-
                 <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                   <div className="flex items-center space-x-3 overflow-hidden">
                       <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shadow-inner shrink-0">
@@ -304,7 +312,7 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
           <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-4xl text-slate-200 shadow-inner mb-6">
              <i className="fas fa-door-open"></i>
           </div>
-          <p className="text-xl font-black uppercase tracking-[0.4em] text-slate-400">No events scheduled</p>
+          <p className="text-xl font-black uppercase tracking-[0.4em] text-slate-400">{searchTerm ? 'No matches found' : 'No events scheduled'}</p>
         </div>
       )}
 
