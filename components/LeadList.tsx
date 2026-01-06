@@ -290,7 +290,7 @@ const LeadList: React.FC<LeadListProps> = ({
         });
 
         const leadToAdd: Lead = {
-          id: `lead_imp_${Date.now()}_${i}`,
+          id: `lead_imp_${Date.now()}`,
           brokerageId: 'brk_7721',
           assignedAgentId: 'agent_1',
           firstName: leadObj.firstname || leadObj.name?.split(' ')[0] || 'Imported',
@@ -682,14 +682,13 @@ const LeadList: React.FC<LeadListProps> = ({
         );
       case 'stage':
         return (
-          <span className={`text-[12px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm ${getStatusBadgeClass(lead.status)}`}>
+          <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm ${getStatusBadgeClass(lead.status)}`}>
             {statusLabels[lead.status] || lead.status}
           </span>
         );
       case 'name':
         return (
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-black shrink-0 shadow-sm">{lead.firstName?.[0]}{lead.lastName?.[0]}</div>
             <div className="overflow-hidden">
               <p className="text-lg font-bold text-slate-800 truncate">{lead.firstName} {lead.lastName}</p>
             </div>
@@ -742,7 +741,7 @@ const LeadList: React.FC<LeadListProps> = ({
               onDragOver={(e) => onDragOver(e, idx)}
               onDrop={(e) => onDrop(e, idx)}
               onClick={() => handleTabClick(status)}
-              className={`px-6 py-3 rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative group ${
+              className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap relative group ${
                 dragOverIdx === idx && draggedItem?.type === 'tab' ? 'ring-2 ring-indigo-500 scale-105' : ''
               } ${
                 filterStatus === status 
@@ -856,11 +855,11 @@ const LeadList: React.FC<LeadListProps> = ({
              const color = colorPool[(i * 7) % colorPool.length];
              
              return (
-               <div key={i} className={`p-5 rounded-2xl border shadow-sm flex items-center space-x-5 transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-900 border-slate-800' : `${color.bg} ${color.border}`}`}>
-                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-base shadow-lg text-white ${color.icon}`}><i className={`fas ${stat.icon}`}></i></div>
+               <div key={i} className={`p-3.5 rounded-2xl border shadow-sm flex items-center space-x-3.5 transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-900 border-slate-800' : `${color.bg} ${color.border}`}`}>
+                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-lg text-white ${color.icon}`}><i className={`fas ${stat.icon}`}></i></div>
                  <div>
-                   <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800 opacity-70'}`}>{stat.label}</p>
-                   <p className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{stat.value}</p>
+                   <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800 opacity-70'}`}>{stat.label}</p>
+                   <p className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{stat.value}</p>
                  </div>
                </div>
              );
@@ -983,7 +982,6 @@ const LeadList: React.FC<LeadListProps> = ({
 
               <div onClick={() => onSelectLead(lead)}>
                 <div className="flex items-center space-x-3 mb-5">
-                  <div className={`bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black shrink-0 transition-all ${isExpanded ? 'w-16 h-16 text-2xl' : 'w-12 h-12 text-xl'}`}>{lead.firstName?.[0]}{lead.lastName?.[0]}</div>
                   <div className="overflow-hidden">
                     <h4 className={`${isExpanded ? 'text-2xl' : 'text-lg'} font-black group-hover:text-indigo-600 transition-colors truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{lead.firstName} {lead.lastName}</h4>
                     <div className="flex items-center space-x-1.5 mt-1">
@@ -996,6 +994,12 @@ const LeadList: React.FC<LeadListProps> = ({
                   <div>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Property Address</p>
                     <p className={`${isExpanded ? 'text-lg' : 'text-sm'} font-bold truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{lead.propertyAddress || 'No address provided'}</p>
+                  </div>
+                  
+                  {/* Phone Number Display Added Below Property Address */}
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Direct Phone</p>
+                    <p className={`${isExpanded ? 'text-lg' : 'text-sm'} font-bold truncate ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{lead.phone || 'N/A'}</p>
                   </div>
                   
                   {isExpanded && lead.email && (
@@ -1380,13 +1384,13 @@ const LeadList: React.FC<LeadListProps> = ({
                             const isSelected = leadFormData.tags?.includes(tag);
                             return (
                               <button 
-                                key={tag}
-                                type="button"
+                                key={tag} 
+                                type="button" 
                                 onClick={() => toggleLeadTag(tag)}
                                 className={`px-5 py-4 rounded-xl text-[11px] font-black uppercase tracking-widest text-left transition-all flex items-center justify-between border ${
                                   isSelected 
                                     ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-indigo-400' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-indigo-300 hover:text-indigo-600'
+                                    : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-indigo-400' : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600'
                                 }`}
                               >
                                 <span className="truncate">{tag}</span>
