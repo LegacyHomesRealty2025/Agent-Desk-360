@@ -13,11 +13,10 @@ interface DashboardProps {
   onInviteUser?: (email: string, role: UserRole) => string;
   isDarkMode?: boolean;
   toggleDarkMode?: () => void;
- ViewViewingAgentId: string;
+  viewingAgentId: string;
   onSetViewingAgentId: (id: string) => void;
   goals: YearlyGoal[];
   onUpdateGoal: (goal: YearlyGoal) => void;
-  viewingAgentId: string;
 }
 
 const TZ = 'America/Los_Angeles';
@@ -65,7 +64,7 @@ const CustomPieTooltip = ({ active, payload, isDarkMode }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className={`p-6 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border-2 animate-in fade-in zoom-in-95 duration-200 z-[1000] ${isDarkMode ? 'bg-slate-900 border-indigo-500/30 text-white' : 'bg-white border-indigo-100 text-slate-900'}`}>
+      <div className={`p-6 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border-2 animate-in fade-in zoom-in-95 duration-200 z-[1000] ${isDarkMode ? 'bg-slate-900 border-indigo-50/30 text-white' : 'bg-white border-indigo-100 text-slate-900'}`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: payload[0].payload.fill || payload[0].fill }}></div>
           <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">{data.name}</p>
@@ -231,18 +230,18 @@ const Dashboard: React.FC<DashboardProps> = ({
     const color = diff > 0 ? "text-emerald-500" : diff < 0 ? "text-rose-500" : "text-slate-500";
     
     return {
-      text: `You are ${status} with last year by ${Math.abs(diff).toFixed(1)}%.`,
+      text: `Production is ${status} last year by ${Math.abs(diff).toFixed(1)}%.`,
       color
     };
   }, [monthlyData]);
 
   // Lead Source Mix
   const leadSourceData = useMemo(() => {
-    const sources: Record<string, number> = {};
+    const sourcesMap: Record<string, number> = {};
     const pipelineStatuses = [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.ACTIVE, LeadStatus.IN_ESCROW];
     const pipelineLeads = dashboardLeads.filter(l => pipelineStatuses.includes(l.status) && getLAPart(l.createdAt, 'year') === currentYear);
-    pipelineLeads.forEach(l => { sources[l.source] = (sources[l.source] || 0) + 1; });
-    return Object.entries(sources).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+    pipelineLeads.forEach(l => { sourcesMap[l.source] = (sourcesMap[l.source] || 0) + 1; });
+    return Object.entries(sourcesMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
   }, [dashboardLeads, currentYear]);
 
   const pipelineData = [
@@ -585,11 +584,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                   cursor={{fill: isDarkMode ? '#ffffff05' : '#f8fafc'}} 
                   content={<CustomTooltip chartView={chartView} isDarkMode={isDarkMode} />}
                 />
-                {/* Fixed: Replaced undefined showYoYComparison with compareLastYear */}
                 {compareLastYear && (
                   <Bar dataKey="previous" fill={isDarkMode ? '#1e293b' : '#e2e8f0'} radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30} />
                 )}
-                {/* Fixed: Replaced undefined showYoYComparison with compareLastYear */}
                 <Bar dataKey="current" radius={[6, 6, 0, 0]} barSize={compareLastYear ? 18 : 30}>
                     {monthlyData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={index === currentLAMonthIdx ? '#6366f1' : isDarkMode ? '#475569' : '#1e293b'} />
@@ -600,94 +597,20 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="space-y-8 lg:col-span-1">
-          {/* Agent Ranking Box */}
-          <div className={`p-8 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-             <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black tracking-tight">Agent Leaderboard</h3>
-                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-50 px-2 py-1 rounded-lg">Top Performers</span>
-             </div>
-
-             <div className="flex-1 space-y-4 overflow-y-auto scrollbar-hide pr-1">
-                {agents.map(agent => {
-                   const agentClosedDeals = deals.filter(d => 
-                     d.assignedUserId === agent.id && 
-                     d.status === 'CLOSED' && 
-                     getLAPart(d.date, 'year') === currentYear
-                   );
-                   const volume = agentClosedDeals.reduce((sum, d) => sum + d.salePrice, 0);
-                   const units = agentClosedDeals.length;
-                   return { ...agent, volume, units };
-                }).sort((a, b) => b.volume - a.volume).map((agent, index) => {
-                  const isTop3 = index < 3;
-                  const rankColor = index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-slate-300' : index === 2 ? 'bg-orange-400' : 'bg-slate-100';
-                  const rankIcon = index === 0 ? 'fa-crown' : index === 1 ? 'fa-medal' : index === 2 ? 'fa-award' : '';
-                  const maxAgentVolume = agents.reduce((max, a) => {
-                    const vol = deals.filter(d => d.assignedUserId === a.id && d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear).reduce((s, d) => s + d.salePrice, 0);
-                    return Math.max(max, vol);
-                  }, 1);
-                  
-                  return (
-                    <div 
-                      key={agent.id} 
-                      className={`p-4 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${isDarkMode ? 'bg-slate-800/50 border-slate-800 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-md'}`}
-                      onClick={() => { onSetViewingAgentId(agent.id); }}
-                    >
-                      <div className="flex items-center space-x-4 flex-1 overflow-hidden">
-                        <div className="relative shrink-0">
-                          <img src={agent.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 shadow-md" alt="" />
-                          <div className={`absolute -top-2 -left-2 w-6 h-6 rounded-lg flex items-center justify-center text-[10px] text-white font-black shadow-lg ${rankColor}`}>
-                            {isTop3 ? <i className={`fas ${rankIcon}`}></i> : index + 1}
-                          </div>
-                        </div>
-                        <div className="overflow-hidden">
-                           <p className="text-sm font-black truncate flex items-center">
-                             {agent.firstName} {agent.lastName}
-                             {index === 0 && <i className="fas fa-trophy text-yellow-500 ml-2 text-[10px]" title="Top Producer"></i>}
-                           </p>
-                           <div className="flex items-center space-x-2 mt-0.5">
-                              <div className="flex-1 h-1 bg-slate-200 rounded-full min-w-[60px] overflow-hidden">
-                                 <div className="h-full bg-indigo-500" style={{ width: `${(agent.volume / maxAgentVolume) * 100}%` }}></div>
-                              </div>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase">{agent.units} Units</span>
-                           </div>
-                        </div>
-                      </div>
-                      <div className="text-right ml-4 shrink-0">
-                        <p className="text-sm font-black text-indigo-600">${(agent.volume / 1000000).toFixed(1)}M</p>
-                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
-                      </div>
-                    </div>
-                  );
-                })}
-             </div>
-
-             <div className="mt-8 pt-6 border-t border-slate-100">
-                <button 
-                  onClick={() => onNavigate('reports')}
-                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center justify-center space-x-3"
-                >
-                   <span>Full Team Analytics</span>
-                   <i className="fas fa-arrow-right text-[9px]"></i>
-                </button>
-             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Lead Acquisition Box - Styled as requested */}
         <div className="lg:col-span-1">
-           {/* Lead Source Mix - ENHANCED VISIBILITY */}
-           <div className={`p-6 rounded-[2.5rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-            <h3 className="text-lg font-black tracking-tight mb-4 leading-none">Lead Source Mix</h3>
-            <div className="flex-1 min-h-[250px] relative mb-6">
+           <div className={`p-8 rounded-[3rem] border shadow-sm flex flex-col h-full ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <h3 className="text-2xl font-black tracking-tight mb-1 leading-none">Lead Acquisition</h3>
+            <p className="text-sm text-slate-400 font-medium mb-12">Top channels for {currentYear}.</p>
+            
+            <div className="flex-1 min-h-[250px] relative mb-12">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie 
                     data={leadSourceData} 
-                    innerRadius={55} 
-                    outerRadius={80} 
-                    paddingAngle={6} 
+                    innerRadius={75} 
+                    outerRadius={110} 
+                    paddingAngle={8} 
                     dataKey="value" 
                     stroke="none"
                     animationBegin={0}
@@ -703,24 +626,104 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center translate-y-1">
-                  <p className="text-4xl font-black tracking-tighter leading-none">{dashboardLeads.length}</p>
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1.5">TOTAL</p>
+                <div className="text-center">
+                  <p className="text-5xl font-black tracking-tighter leading-none">{dashboardLeads.length}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">TOTAL LEADS</p>
                 </div>
               </div>
             </div>
-            <div className="space-y-3 mt-2">
+            
+            <div className="space-y-5">
               {leadSourceData.map((s, i) => (
-                <div key={s.name} className="flex items-center justify-between">
+                <div key={s.name} className="flex items-center justify-between group">
                   <div className="flex items-center space-x-4">
-                    <div className="w-3.5 h-3.5 rounded-full shadow-sm shrink-0" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
-                    <span className={`text-sm font-black uppercase tracking-tight ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{s.name}</span>
+                    <div className="w-3 h-3 rounded-full shadow-sm shrink-0" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
+                    <span className={`text-[13px] font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{s.name}</span>
                   </div>
-                  <span className={`text-sm font-black ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>{s.value}</span>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-[13px] font-black">{s.value}</span>
+                    <div className={`w-16 h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                      <div className="h-full rounded-full" style={{ width: `${(s.value / Math.max(1, dashboardLeads.length)) * 100}%`, backgroundColor: COLORS[i % COLORS.length] }}></div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Agent Ranking Section - Updated to Vertical List View */}
+      <div className="grid grid-cols-1 gap-8">
+        <div className={`p-8 rounded-[2.5rem] border shadow-sm flex flex-col ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+           <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-black tracking-tight">Agent Leaderboard</h3>
+              <span className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-50 px-2 py-1 rounded-lg">Top Performers</span>
+           </div>
+
+           <div className="flex flex-col gap-4">
+              {agents.map(agent => {
+                 const agentClosedDeals = deals.filter(d => 
+                   d.assignedUserId === agent.id && 
+                   d.status === 'CLOSED' && 
+                   getLAPart(d.date, 'year') === currentYear
+                 );
+                 const volume = agentClosedDeals.reduce((sum, d) => sum + d.salePrice, 0);
+                 const units = agentClosedDeals.length;
+                 return { ...agent, volume, units };
+              }).sort((a, b) => b.volume - a.volume).map((agent, index) => {
+                const isTop3 = index < 3;
+                const rankColor = index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-slate-300' : index === 2 ? 'bg-orange-400' : 'bg-slate-100';
+                const rankIcon = index === 0 ? 'fa-crown' : index === 1 ? 'fa-medal' : index === 2 ? 'fa-award' : '';
+                const maxAgentVolume = agents.reduce((max, a) => {
+                  const vol = deals.filter(d => d.assignedUserId === a.id && d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear).reduce((s, d) => s + d.salePrice, 0);
+                  return Math.max(max, vol);
+                }, 1);
+                
+                return (
+                  <div 
+                    key={agent.id} 
+                    className={`p-5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${isDarkMode ? 'bg-slate-800/50 border-slate-800 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-md'}`}
+                    onClick={() => { onSetViewingAgentId(agent.id); }}
+                  >
+                    <div className="flex items-center space-x-6 flex-1 overflow-hidden">
+                      <div className="relative shrink-0">
+                        <img src={agent.avatar} className="w-12 h-12 rounded-xl object-cover ring-2 ring-white/10 shadow-md" alt="" />
+                        <div className={`absolute -top-2 -left-2 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] text-white font-black shadow-lg ${rankColor}`}>
+                          {isTop3 ? <i className={`fas ${rankIcon}`}></i> : index + 1}
+                        </div>
+                      </div>
+                      <div className="overflow-hidden flex-1 max-w-md">
+                         <p className="text-base font-black truncate flex items-center">
+                           {agent.firstName} {agent.lastName}
+                           {index === 0 && <span className="ml-2 text-sm" title="Top Producer">🏆</span>}
+                         </p>
+                         <div className="flex items-center space-x-4 mt-1.5">
+                            <div className="flex-1 h-1.5 bg-slate-200 rounded-full min-w-[120px] overflow-hidden">
+                               <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${(agent.volume / maxAgentVolume) * 100}%` }}></div>
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase whitespace-nowrap">{agent.units} Units</span>
+                         </div>
+                      </div>
+                    </div>
+                    <div className="text-right ml-8 shrink-0">
+                      <p className="text-lg font-black text-indigo-600">${(agent.volume / 1000000).toFixed(1)}M</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
+                    </div>
+                  </div>
+                );
+              })}
+           </div>
+
+           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+              <button 
+                onClick={() => onNavigate('reports')}
+                className="px-14 py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center justify-center space-x-3 mx-auto active:scale-95"
+              >
+                 <span>View Full Performance Reports</span>
+                 <i className="fas fa-arrow-right text-xs"></i>
+              </button>
+           </div>
         </div>
       </div>
 

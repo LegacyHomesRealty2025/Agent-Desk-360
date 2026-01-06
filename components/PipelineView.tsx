@@ -48,7 +48,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   // Drill-down List Features
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [columnOrder, setColumnOrder] = useState<ColumnId[]>(['client', 'closing', 'price', 'side', 'source', 'actions']);
+  // Reordered: 'closing' moved after 'source'
+  const [columnOrder, setColumnOrder] = useState<ColumnId[]>(['client', 'price', 'side', 'source', 'closing', 'actions']);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
   
@@ -66,9 +67,9 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   const currentYear = new Date().getFullYear();
 
   const previousYears = useMemo<number[]>(() => {
-    const years = deals.map(d => new Date(d.date).getFullYear());
+    const years = deals.map(d => d.date ? new Date(d.date).getFullYear() : 0);
     return Array.from(new Set(years))
-      .filter((y: number) => y < currentYear)
+      .filter((y: number) => y > 0 && y < currentYear)
       .sort((a: number, b: number) => b - a);
   }, [deals, currentYear]);
 
@@ -81,7 +82,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     email: '',
     address: '',
     salePrice: '', 
-    commissionPercentage: '2.5' as any,
+    commissionPercentage: '' as any, // Set to empty string as requested
     status: 'ACTIVE' as Deal['status'],
     side: 'BUYER' as Deal['side'],
     date: '',
@@ -319,8 +320,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
 
   const matchesSearch = (deal: Deal) => {
     const term = searchTerm.toLowerCase().trim();
-    if (startDate && new Date(deal.date).toISOString().split('T')[0] < startDate) return false;
-    if (endDate && new Date(deal.date).toISOString().split('T')[0] > endDate) return false;
+    if (startDate && deal.date && new Date(deal.date).toISOString().split('T')[0] < startDate) return false;
+    if (endDate && deal.date && new Date(deal.date).toISOString().split('T')[0] > endDate) return false;
     if (!term) return true;
     const nameMatch = (deal.leadName || '').toLowerCase().includes(term);
     const addressMatch = (deal.address || '').toLowerCase().includes(term);
@@ -328,8 +329,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   };
 
   const applyYearFilter = (list: Deal[]) => {
-    if (yearFilter === 'CURRENT') return list.filter(d => new Date(d.date).getFullYear() === currentYear);
-    if (typeof yearFilter === 'number') return list.filter(d => new Date(d.date).getFullYear() === yearFilter);
+    if (yearFilter === 'CURRENT') return list.filter(d => d.date && new Date(d.date).getFullYear() === currentYear);
+    if (typeof yearFilter === 'number') return list.filter(d => d.date && new Date(d.date).getFullYear() === yearFilter);
     return list;
   };
 
@@ -342,6 +343,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   const groupDealsByMonth = (list: Deal[]) => {
     const groups: Record<string, Deal[]> = {};
     list.forEach(deal => {
+      if (!deal.date) return;
       const d = new Date(deal.date);
       const monthYear = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: TZ }).format(d);
       if (!groups[monthYear]) groups[monthYear] = [];
@@ -359,8 +361,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
       let valB = b[sortKey];
       
       if (sortKey === 'date') {
-        valA = new Date(a.date).getTime();
-        valB = new Date(b.date).getTime();
+        valA = a.date ? new Date(a.date).getTime() : 0;
+        valB = b.date ? new Date(b.date).getTime() : 0;
       }
 
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
@@ -404,7 +406,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
 
   const renderDealCard = (deal: Deal) => {
     const lead = leads.find(l => l.id === deal.leadId);
-    const sourceInfo = (deal.source || lead?.source) ? getSourceIcon(deal.source || lead?.source || '') : null;
+    const sourceInfo = getSourceIcon(deal.source || lead?.source || '');
     return (
       <div 
         key={deal.id} 
@@ -413,10 +415,9 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
         onClick={() => handleOpenEdit(deal)}
         className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group cursor-grab active:cursor-grabbing relative overflow-hidden ${draggedDealId === deal.id ? 'opacity-30' : ''}`}
       >
-        {/* FIXED ACTIONS TOP RIGHT */}
         <div className="absolute top-3 right-3 flex space-x-1 z-10" onClick={e => e.stopPropagation()}>
-          <button onClick={() => handleOpenEdit(deal)} className="w-8 h-8 bg-slate-900/90 text-white rounded-lg flex items-center justify-center hover:bg-indigo-600 shadow-lg border border-white/20 transition-all"><i className="fas fa-pencil-alt text-[10px]"></i></button>
-          <button onClick={() => setDealToDelete(deal)} className="w-8 h-8 bg-rose-600 text-white rounded-lg flex items-center justify-center hover:bg-rose-700 shadow-lg border border-white/20 transition-all"><i className="fas fa-trash-alt text-[10px]"></i></button>
+          <button onClick={() => handleOpenEdit(deal)} className="w-6 h-6 bg-slate-900/90 text-white rounded-lg flex items-center justify-center hover:bg-indigo-600 shadow-lg border border-white/20 transition-all"><i className="fas fa-pencil-alt text-[8px]"></i></button>
+          <button onClick={() => setDealToDelete(deal)} className="w-6 h-6 bg-rose-600 text-white rounded-lg flex items-center justify-center hover:bg-rose-700 shadow-lg border border-white/20 transition-all"><i className="fas fa-trash-alt text-[8px]"></i></button>
         </div>
 
         <div className="flex items-center justify-between mb-2">
@@ -442,10 +443,16 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     if (s.includes('facebook')) return { icon: 'fab fa-facebook', color: 'text-[#1877F2]' };
     if (s.includes('referral')) return { icon: 'fas fa-handshake', color: 'text-indigo-500' };
     if (s.includes('open house')) return { icon: 'fas fa-door-open', color: 'text-amber-500' };
-    return { icon: 'fas fa-keyboard', color: 'text-slate-400' };
+    if (s.includes('instagram')) return { icon: 'fab fa-instagram', color: 'text-[#E1306C]' };
+    if (s.includes('tiktok')) return { icon: 'fab fa-tiktok', color: 'text-[#000000]' };
+    if (s.includes('linkedin')) return { icon: 'fab fa-linkedin', color: 'text-[#0A66C2]' };
+    if (s.includes('google')) return { icon: 'fab fa-google', color: 'text-[#4285F4]' };
+    if (s.includes('friend')) return { icon: 'fas fa-user-group', color: 'text-sky-500' };
+    return { icon: 'fas fa-globe', color: 'text-slate-400' };
   };
 
-  const inputClass = "w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm text-slate-800";
+  // Lightened placeholder color for a faded effect
+  const inputClass = "w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm text-slate-800 placeholder:text-slate-200 placeholder:font-medium";
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -544,8 +551,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                     <div className="text-left">
                        <h3 className="text-xl font-black uppercase tracking-tighter leading-none">{status === 'CLOSED' ? 'Sold' : status}</h3>
                        <div className="flex flex-col mt-1">
-                          <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">{statusDeals.length} Items</p>
-                          <p className="text-[8px] font-black uppercase tracking-tighter opacity-50 flex items-center mt-0.5">
+                          <p className="text-[9px] font-bold uppercase tracking-widest">{statusDeals.length} Items</p>
+                          <p className="text-[8px] font-black uppercase tracking-tighter opacity-90 flex items-center mt-0.5">
                             <span>Click for full page</span>
                             <i className="fas fa-arrow-up-right-from-square ml-1.5"></i>
                           </p>
@@ -591,11 +598,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
              </div>
              <div className="flex items-center space-x-8">
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aggregate Volume</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
                   <p className="text-2xl font-black text-slate-900 tracking-tighter">${totalFilteredVolume.toLocaleString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Aggregate GCI</p>
+                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total GCI</p>
                   <p className="text-2xl font-black text-emerald-600 tracking-tighter">${totalFilteredGCI.toLocaleString()}</p>
                 </div>
                 <button 
@@ -625,7 +632,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                          {col !== 'actions' && <i className="fas fa-grip-vertical mr-3 opacity-20 group-hover:opacity-100 transition-opacity"></i>}
                          {col === 'client' ? 'Client' : col === 'closing' ? 'Closing' : col === 'price' ? 'Price' : col === 'side' ? 'Side' : col === 'source' ? 'Source' : 'Actions'}
                          {sortKey === (col === 'client' ? 'leadName' : col === 'price' ? 'salePrice' : col) && (
-                           <i className={`fas fa-sort-amount-${sortDirection === 'asc' ? 'up' : 'down'} ml-2 text-indigo-500`}></i>
+                           <i className={`fas fa-sort-amount-${sortDirection === 'asc' ? 'up' : 'down'} ml-2 text-indigo-50`}></i>
                          )}
                       </div>
                     </th>
@@ -643,7 +650,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                             <p className="text-[11px] text-slate-400 font-bold truncate max-w-xs">{deal.address}</p>
                           </div>
                         )}
-                        {col === 'closing' && <span className="font-black text-slate-600 text-[11px] uppercase tracking-tighter">{new Date(deal.date).toLocaleDateString()}</span>}
+                        {col === 'closing' && <span className="font-black text-slate-600 text-[11px] uppercase tracking-tighter">{deal.date ? new Date(deal.date).toLocaleDateString() : 'N/A'}</span>}
                         {col === 'price' && (
                           <div>
                             <p className="text-base font-black text-slate-900">${deal.salePrice.toLocaleString()}</p>
@@ -658,9 +665,9 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                           </div>
                         )}
                         {col === 'actions' && (
-                          <div className="flex items-center justify-end space-x-3" onClick={e => e.stopPropagation()}>
-                            <button onClick={()=> handleOpenEdit(deal)} className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt"></i></button>
-                            <button onClick={()=>setDealToDelete(deal)} className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt"></i></button>
+                          <div className="flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                            <button onClick={()=> handleOpenEdit(deal)} className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-[10px]"></i></button>
+                            <button onClick={()=>setDealToDelete(deal)} className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
                           </div>
                         )}
                       </td>
@@ -723,14 +730,14 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
           <div className="absolute inset-0 z-0" onClick={() => setIsModalOpen(false)}></div>
           <div className="bg-slate-50 rounded-[3rem] shadow-2xl border border-slate-200 w-full max-w-6xl p-0 relative z-10 animate-in zoom-in-95 duration-200 flex flex-col h-[90vh] text-[12px] overflow-hidden">
             
-            {/* UNIFORM HEADER */}
+            {/* HEADER */}
             <div className="px-10 py-6 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center space-x-5">
                  <div className="w-12 h-12 bg-indigo-600 text-white rounded-[1.25rem] flex items-center justify-center text-xl shadow-xl shadow-indigo-100">
                     <i className="fas fa-file-contract"></i>
                  </div>
                  <div>
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{editingDealId ? 'Update Protocol' : 'New Closing Protocol'}</h3>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{editingDealId ? 'Transaction Detail' : 'New Transaction'}</h3>
                     <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px] mt-1">Fulfillment Intelligence Log</p>
                  </div>
               </div>
@@ -739,13 +746,13 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
 
             {/* QUICK NAVIGATION HEADINGS */}
             <div className="bg-white border-b border-slate-100 px-10 py-3 flex items-center space-x-6 shrink-0 overflow-x-auto scrollbar-hide">
-               <button onClick={() => scrollToSection('sec-client')} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-indigo-100 transition-all whitespace-nowrap">Client Information</button>
-               <button onClick={() => scrollToSection('sec-escrow')} className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-amber-100 transition-all whitespace-nowrap">Escrow Information</button>
-               <button onClick={() => scrollToSection('sec-lender')} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-emerald-100 transition-all whitespace-nowrap">Lender Information</button>
-               <button onClick={() => scrollToSection('sec-title')} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-blue-100 transition-all whitespace-nowrap">Title Information</button>
-               <button onClick={() => scrollToSection('sec-tc')} className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-purple-100 transition-all whitespace-nowrap">Coordinator (TC)</button>
-               <button onClick={() => scrollToSection('sec-timeline')} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-slate-200 transition-all whitespace-nowrap">Closing Timeline</button>
-               <button onClick={() => scrollToSection('sec-notes')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-indigo-700 transition-all whitespace-nowrap">Journal Notes</button>
+               <button onClick={() => scrollToSection('sec-client')} className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-indigo-100 transition-all whitespace-nowrap">Client Info</button>
+               <button onClick={() => scrollToSection('sec-escrow')} className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-amber-100 transition-all whitespace-nowrap">Escrow Info</button>
+               <button onClick={() => scrollToSection('sec-lender')} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-emerald-100 transition-all whitespace-nowrap">Lender Info</button>
+               <button onClick={() => scrollToSection('sec-title')} className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-blue-100 transition-all whitespace-nowrap">Title Info</button>
+               <button onClick={() => scrollToSection('sec-tc')} className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-purple-100 transition-all whitespace-nowrap">TC Info</button>
+               <button onClick={() => scrollToSection('sec-timeline')} className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-slate-200 transition-all whitespace-nowrap">Timeline</button>
+               <button onClick={() => scrollToSection('sec-notes')} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-indigo-700 transition-all whitespace-nowrap">Notes</button>
             </div>
 
             {/* SCROLLABLE BODY */}
@@ -777,12 +784,12 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                       <div className="md:col-span-2 space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Property Address</label><input required type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className={inputClass} placeholder="Street Address, City, State, Zip" /></div>
                       <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contract Sale Price</label><input required type="text" value={formData.salePrice} onChange={handleSalePriceChange} className={`${inputClass} !text-indigo-600 text-lg`} placeholder="$0.00" /></div>
-                      <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Commission %</label><input required type="number" step="0.01" value={formData.commissionPercentage} onChange={e => setFormData({...formData, commissionPercentage: e.target.value})} className={`${inputClass} !text-emerald-600 text-lg`} placeholder="2.5" /></div>
+                      <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Commission %</label><input required type="number" step="0.01" value={formData.commissionPercentage} onChange={e => setFormData({...formData, commissionPercentage: e.target.value})} className={`${inputClass} !text-emerald-600 text-lg`} placeholder="e.g. 2.5" /></div>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Transaction Side</label><select className={inputClass} value={formData.side} onChange={e => setFormData({...formData, side: e.target.value as any})}><option value="BUYER">Buyer Side</option><option value="SELLER">Seller Side</option><option value="BOTH">Dual Representation</option></select></div>
                       <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lead Source</label><select className={inputClass} value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})}><option value="Manual Entry">Manual Entry</option>{availableSources.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                      <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label><select className={inputClass} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="ACTIVE">Active Pipeline</option><option value="PENDING">Pending Escrow</option><option value="CLOSED">Sold / Closed</option></select></div>
+                      <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label><select className={inputClass} value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="ACTIVE">Active</option><option value="PENDING">Pending</option><option value="CLOSED">Sold/Closed</option></select></div>
                    </div>
                 </div>
 
@@ -837,11 +844,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                    </div>
                 </div>
 
-                {/* 5. TRANSACTION COORDINATOR */}
+                {/* 5. TRANSACTION COORDINATOR INFORMATION */}
                 <div id="sec-tc" className="bg-white border-2 border-purple-100 rounded-[2.5rem] p-10 shadow-sm space-y-10">
                    <div className="flex items-center space-x-4 border-b border-purple-50 pb-6">
                       <div className="w-10 h-10 bg-purple-500 text-white rounded-xl flex items-center justify-center"><i className="fas fa-user-gear"></i></div>
-                      <h4 className="text-lg font-black text-purple-600 uppercase tracking-widest">5. Transaction Coordinator (TC)</h4>
+                      <h4 className="text-lg font-black text-purple-600 uppercase tracking-widest">5. TC Information</h4>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TC Name</label><input type="text" value={formData.tcName} onChange={e => setFormData({...formData, tcName: e.target.value})} className={inputClass} placeholder="e.g. Kelly Kapoor" /></div>
@@ -850,11 +857,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                    </div>
                 </div>
 
-                {/* 6. CLOSING TIMELINE */}
+                {/* 6. TIMELINE INFORMATION */}
                 <div id="sec-timeline" className="bg-white border-2 border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-10">
                    <div className="flex items-center space-x-4 border-b border-slate-100 pb-6">
                       <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center"><i className="fas fa-calendar-check"></i></div>
-                      <h4 className="text-lg font-black text-slate-800 uppercase tracking-widest">6. Closing Timeline</h4>
+                      <h4 className="text-lg font-black text-slate-800 uppercase tracking-widest">6. Timeline Information</h4>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                       <div className="space-y-2.5"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Inspection Due</label><input type="date" value={formData.inspectionDueDate} onChange={e => setFormData({...formData, inspectionDueDate: e.target.value})} className={inputClass} /></div>
@@ -864,15 +871,15 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                    </div>
                 </div>
 
-                {/* 7. NOTES */}
+                {/* 7. NOTES INFORMATION */}
                 <div id="sec-notes" className="bg-white border-2 border-indigo-200 rounded-[2.5rem] p-10 shadow-sm space-y-8 pb-12">
                    <div className="flex items-center space-x-4 border-b border-indigo-100 pb-6">
                       <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i className="fas fa-pen-nib"></i></div>
-                      <h4 className="text-lg font-black text-indigo-800 uppercase tracking-widest">7. Operational Milestones & Notes</h4>
+                      <h4 className="text-lg font-black text-indigo-800 uppercase tracking-widest">7. Notes Information</h4>
                    </div>
                    <div className="space-y-6">
                       <div className="flex gap-4">
-                        <textarea className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-6 font-bold text-xl outline-none min-h-[140px] shadow-inner focus:bg-white transition-all" placeholder="Enter transaction milestones, log calls, or important reminders here..." value={pendingNote} onChange={e => setPendingNote(e.target.value)} />
+                        <textarea className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-6 font-bold text-xl outline-none min-h-[140px] shadow-inner focus:bg-white transition-all placeholder:text-slate-200 placeholder:font-medium" placeholder="Enter transaction milestones, log calls, or important reminders here..." value={pendingNote} onChange={e => setPendingNote(e.target.value)} />
                         <button type="button" onClick={handleAddNote} className="px-10 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest h-[140px] shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">Log Note</button>
                       </div>
                       <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
@@ -895,7 +902,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               </div>
               <div className="flex space-x-4">
                 <button type="button" onClick={() => { setIsModalOpen(false); resetForm(); }} className="px-12 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-slate-200 active:scale-95 transition-all">Discard Draft</button>
-                <button type="submit" form="transaction-form" className="px-16 py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">Save Closing Protocol</button>
+                <button type="submit" form="transaction-form" className="px-16 py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">Save Transaction</button>
               </div>
             </div>
           </div>

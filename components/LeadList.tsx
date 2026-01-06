@@ -614,7 +614,11 @@ const LeadList: React.FC<LeadListProps> = ({
     if (s.includes('google')) return { icon: 'fab fa-google', color: 'text-[#4285F4]' };
     if (s.includes('referral')) return { icon: 'fas fa-handshake', color: 'text-indigo-500' };
     if (s.includes('open house')) return { icon: 'fas fa-door-open', color: 'text-amber-500' };
-    return { icon: 'fas fa-keyboard', color: 'text-slate-400' };
+    if (s.includes('friend')) return { icon: 'fas fa-user-group', color: 'text-sky-500' };
+    if (s.includes('instagram')) return { icon: 'fab fa-instagram', color: 'text-[#E1306C]' };
+    if (s.includes('tiktok')) return { icon: 'fab fa-tiktok', color: 'text-[#000000]' };
+    if (s.includes('linkedin')) return { icon: 'fab fa-linkedin', color: 'text-[#0A66C2]' };
+    return { icon: 'fas fa-globe', color: 'text-slate-400' };
   };
 
   const getStatusBadgeClass = (status: LeadStatus) => {
@@ -706,9 +710,10 @@ const LeadList: React.FC<LeadListProps> = ({
       case 'budget':
         return <span className="text-base font-black text-slate-800">${lead.budget.toLocaleString()}</span>;
       case 'source':
+        const src = getSourceIcon(lead.source);
         return (
           <div className="flex items-center space-x-2">
-            <i className={`${getSourceIcon(lead.source).icon} ${getSourceIcon(lead.source).color} text-[12px]`}></i>
+            <i className={`${src.icon} ${src.color} text-[12px]`}></i>
             <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{lead.source}</span>
           </div>
         );
