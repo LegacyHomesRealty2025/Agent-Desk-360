@@ -1,3 +1,4 @@
+
 export enum UserRole {
   BROKER = 'BROKER',
   AGENT = 'AGENT'
@@ -190,6 +191,35 @@ export interface EmailMessage {
   isStarred?: boolean;
   folder: EmailFolder;
   attachments?: string[];
+}
+
+/** Documents / Learning Library Types **/
+
+export type SharedDocumentType = 'PDF' | 'IMAGE' | 'VIDEO' | 'LINK' | 'DOC';
+
+export interface SharedDocument {
+  id: string;
+  folderId: string;
+  name: string;
+  type: SharedDocumentType;
+  url: string;
+  createdAt: string;
+  uploadedBy: string;
+  uploadedById: string;
+  size?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  sharedWithAgentId?: string; // Empty means everyone
+}
+
+export interface SharedFolder {
+  id: string;
+  name: string;
+  icon: string;
+  createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  sharedWithAgentId?: string; // Empty means everyone
 }
 
 /** Marketing Hub Types **/

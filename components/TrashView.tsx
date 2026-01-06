@@ -1,17 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Lead, Deal, OpenHouse, TrashedMetadata, User } from '../types.ts';
+import { Lead, Deal, OpenHouse, TrashedMetadata, User, SharedDocument, SharedFolder } from '../types.ts';
 
 interface TrashViewProps {
   leads: Lead[];
   deals: Deal[];
   openHouses: OpenHouse[];
   users: User[];
+  documents: SharedDocument[];
+  folders: SharedFolder[];
   trashedSources: TrashedMetadata[];
   trashedTags: TrashedMetadata[];
   onRestoreLead: (id: string) => void;
   onRestoreDeal: (id: string) => void;
   onRestoreOpenHouse: (id: string) => void;
   onRestoreUser: (id: string) => void;
+  onRestoreDocument: (id: string) => void;
+  onRestoreFolder: (id: string) => void;
   onRestoreSource: (name: string) => void;
   onRestoreTag: (name: string) => void;
   onBulkRestoreLeads: (ids: string[]) => void;
@@ -21,16 +25,21 @@ interface TrashViewProps {
   onPermanentDeleteDeal: (id: string) => void;
   onPermanentDeleteOpenHouse: (id: string) => void;
   onPermanentDeleteUser: (id: string) => void;
+  onPermanentDeleteDocument: (id: string) => void;
+  onPermanentDeleteFolder: (id: string) => void;
   onPermanentDeleteSource: (name: string) => void;
   onPermanentDeleteTag: (name: string) => void;
   onBulkPermanentDeleteLeads: (ids: string[]) => void;
   onBulkPermanentDeleteDeals: (ids: string[]) => void;
   onBulkPermanentDeleteOpenHouses: (ids: string[]) => void;
+  onBulkPermanentDeleteFolders?: (ids: string[]) => void;
+  onBulkPermanentDeleteDocuments?: (ids: string[]) => void;
+  onBulkPermanentDeleteUsers?: (ids: string[]) => void;
 }
 
 const TZ = 'America/Los_Angeles';
 
-type TrashTab = 'ALL' | 'LEADS' | 'DEALS' | 'OPEN_HOUSES' | 'TEAM_MEMBERS' | 'SOURCES' | 'TAGS';
+type TrashTab = 'ALL' | 'LEADS' | 'DEALS' | 'OPEN_HOUSES' | 'DOCUMENTS' | 'FOLDERS' | 'TEAM_MEMBERS' | 'SOURCES' | 'TAGS';
 
 interface ConsolidatedItem {
   type: TrashTab;
@@ -47,12 +56,16 @@ const TrashView: React.FC<TrashViewProps> = ({
   deals, 
   openHouses,
   users,
+  documents,
+  folders,
   trashedSources,
   trashedTags,
   onRestoreLead, 
   onRestoreDeal, 
   onRestoreOpenHouse,
   onRestoreUser,
+  onRestoreDocument,
+  onRestoreFolder,
   onRestoreSource,
   onRestoreTag,
   onBulkRestoreLeads,
@@ -62,11 +75,16 @@ const TrashView: React.FC<TrashViewProps> = ({
   onPermanentDeleteDeal,
   onPermanentDeleteOpenHouse,
   onPermanentDeleteUser,
+  onPermanentDeleteDocument,
+  onPermanentDeleteFolder,
   onPermanentDeleteSource,
   onPermanentDeleteTag,
   onBulkPermanentDeleteLeads,
   onBulkPermanentDeleteDeals,
-  onBulkPermanentDeleteOpenHouses
+  onBulkPermanentDeleteOpenHouses,
+  onBulkPermanentDeleteFolders,
+  onBulkPermanentDeleteDocuments,
+  onBulkPermanentDeleteUsers
 }) => {
   const [activeTab, setActiveTab] = useState<TrashTab>('ALL');
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -104,6 +122,26 @@ const TrashView: React.FC<TrashViewProps> = ({
       original: oh
     }));
 
+    documents.forEach(doc => items.push({
+      type: 'DOCUMENTS',
+      id: doc.id,
+      name: doc.id,
+      label: doc.name,
+      subLabel: `Shared ${doc.type}`,
+      deletedAt: doc.deletedAt || '',
+      original: doc
+    }));
+
+    folders.forEach(f => items.push({
+      type: 'FOLDERS',
+      id: f.id,
+      name: f.id,
+      label: f.name,
+      subLabel: 'Training Folder',
+      deletedAt: f.deletedAt || '',
+      original: f
+    }));
+
     users.forEach(u => items.push({
       type: 'TEAM_MEMBERS',
       id: u.id,
@@ -135,7 +173,7 @@ const TrashView: React.FC<TrashViewProps> = ({
     }));
 
     return items.sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
-  }, [leads, deals, openHouses, users, trashedSources, trashedTags]);
+  }, [leads, deals, openHouses, users, documents, folders, trashedSources, trashedTags]);
 
   const currentTabItems = useMemo(() => {
     if (activeTab === 'ALL') return consolidatedTrash;
@@ -147,7 +185,7 @@ const TrashView: React.FC<TrashViewProps> = ({
   };
 
   const selectAllCurrent = () => {
-    if (selectedItemIds.length === currentTabItems.length) {
+    if (selectedItemIds.length === currentTabItems.length && currentTabItems.length > 0) {
       setSelectedItemIds([]);
     } else {
       setSelectedItemIds(currentTabItems.map(i => i.id));
@@ -161,14 +199,18 @@ const TrashView: React.FC<TrashViewProps> = ({
     const dealIds = selectedFullItems.filter(i => i.type === 'DEALS').map(i => i.id);
     const ohIds = selectedFullItems.filter(i => i.type === 'OPEN_HOUSES').map(i => i.id);
     const userIds = selectedFullItems.filter(i => i.type === 'TEAM_MEMBERS').map(i => i.id);
+    const docIds = selectedFullItems.filter(i => i.type === 'DOCUMENTS').map(i => i.id);
+    const folderIds = selectedFullItems.filter(i => i.type === 'FOLDERS').map(i => i.id);
     const sourceNames = selectedFullItems.filter(i => i.type === 'SOURCES').map(i => i.name);
     const tagNames = selectedFullItems.filter(i => i.type === 'TAGS').map(i => i.name);
 
     if (leadIds.length > 0) onBulkRestoreLeads(leadIds);
     if (dealIds.length > 0) onBulkRestoreDeals(dealIds);
     if (ohIds.length > 0) onBulkRestoreOpenHouses(ohIds);
-    userIds.forEach(id => onRestoreUser(id));
     
+    userIds.forEach(id => onRestoreUser(id));
+    docIds.forEach(id => onRestoreDocument(id));
+    folderIds.forEach(id => onRestoreFolder(id));
     sourceNames.forEach(name => onRestoreSource(name));
     tagNames.forEach(name => onRestoreTag(name));
 
@@ -179,19 +221,32 @@ const TrashView: React.FC<TrashViewProps> = ({
     const selectedFullItems = consolidatedTrash.filter(item => selectedItemIds.includes(item.id));
     const totalCount = selectedItemIds.length;
 
-    if (confirm(`Permanently delete ${totalCount} selected item(s)? This action cannot be undone.`)) {
+    if (totalCount === 0) return;
+
+    if (window.confirm(`Permanently delete ${totalCount} selected item(s)? This action cannot be undone.`)) {
       const leadIds = selectedFullItems.filter(i => i.type === 'LEADS').map(i => i.id);
       const dealIds = selectedFullItems.filter(i => i.type === 'DEALS').map(i => i.id);
       const ohIds = selectedFullItems.filter(i => i.type === 'OPEN_HOUSES').map(i => i.id);
       const userIds = selectedFullItems.filter(i => i.type === 'TEAM_MEMBERS').map(i => i.id);
+      const docIds = selectedFullItems.filter(i => i.type === 'DOCUMENTS').map(i => i.id);
+      const folderIds = selectedFullItems.filter(i => i.type === 'FOLDERS').map(i => i.id);
       const sourceNames = selectedFullItems.filter(i => i.type === 'SOURCES').map(i => i.name);
       const tagNames = selectedFullItems.filter(i => i.type === 'TAGS').map(i => i.name);
 
       if (leadIds.length > 0) onBulkPermanentDeleteLeads(leadIds);
       if (dealIds.length > 0) onBulkPermanentDeleteDeals(dealIds);
       if (ohIds.length > 0) onBulkPermanentDeleteOpenHouses(ohIds);
-      userIds.forEach(id => onPermanentDeleteUser(id));
       
+      // Batch handle folders, docs, and users if batch handlers are provided, otherwise fallback to loop
+      if (folderIds.length > 0 && onBulkPermanentDeleteFolders) onBulkPermanentDeleteFolders(folderIds);
+      else folderIds.forEach(id => onPermanentDeleteFolder(id));
+
+      if (docIds.length > 0 && onBulkPermanentDeleteDocuments) onBulkPermanentDeleteDocuments(docIds);
+      else docIds.forEach(id => onPermanentDeleteDocument(id));
+
+      if (userIds.length > 0 && onBulkPermanentDeleteUsers) onBulkPermanentDeleteUsers(userIds);
+      else userIds.forEach(id => onPermanentDeleteUser(id));
+
       sourceNames.forEach(name => onPermanentDeleteSource(name));
       tagNames.forEach(name => onPermanentDeleteTag(name));
 
@@ -204,6 +259,8 @@ const TrashView: React.FC<TrashViewProps> = ({
       case 'LEADS': return 'fa-user';
       case 'DEALS': return 'fa-file-invoice-dollar';
       case 'OPEN_HOUSES': return 'fa-door-open';
+      case 'DOCUMENTS': return 'fa-file-lines';
+      case 'FOLDERS': return 'fa-folder';
       case 'TEAM_MEMBERS': return 'fa-user-tie';
       case 'SOURCES': return 'fa-bullseye';
       case 'TAGS': return 'fa-tag';
@@ -216,6 +273,8 @@ const TrashView: React.FC<TrashViewProps> = ({
       case 'LEADS': return 'text-indigo-600 bg-indigo-50';
       case 'DEALS': return 'text-emerald-600 bg-emerald-50';
       case 'OPEN_HOUSES': return 'text-amber-600 bg-amber-50';
+      case 'DOCUMENTS': return 'text-sky-600 bg-sky-50';
+      case 'FOLDERS': return 'text-violet-600 bg-violet-50';
       case 'TEAM_MEMBERS': return 'text-purple-600 bg-purple-50';
       case 'SOURCES': return 'text-blue-600 bg-blue-50';
       case 'TAGS': return 'text-rose-600 bg-rose-50';
@@ -227,6 +286,8 @@ const TrashView: React.FC<TrashViewProps> = ({
     if (item.type === 'LEADS') onRestoreLead(item.id);
     else if (item.type === 'DEALS') onRestoreDeal(item.id);
     else if (item.type === 'OPEN_HOUSES') onRestoreOpenHouse(item.id);
+    else if (item.type === 'DOCUMENTS') onRestoreDocument(item.id);
+    else if (item.type === 'FOLDERS') onRestoreFolder(item.id);
     else if (item.type === 'TEAM_MEMBERS') onRestoreUser(item.id);
     else if (item.type === 'SOURCES') onRestoreSource(item.name);
     else if (item.type === 'TAGS') onRestoreTag(item.name);
@@ -235,12 +296,14 @@ const TrashView: React.FC<TrashViewProps> = ({
   const handleDelete = (item: ConsolidatedItem) => {
     const msg = item.type === 'SOURCES' || item.type === 'TAGS' 
       ? `Permanently delete this metadata item?` 
-      : `Permanently delete this ${item.type.slice(0, -1)}? This action cannot be undone.`;
+      : `Permanently delete this ${item.type.slice(0, -1).replace('_', ' ')}? This action cannot be undone.`;
     
-    if (confirm(msg)) {
+    if (window.confirm(msg)) {
       if (item.type === 'LEADS') onPermanentDeleteLead(item.id);
       else if (item.type === 'DEALS') onPermanentDeleteDeal(item.id);
       else if (item.type === 'OPEN_HOUSES') onPermanentDeleteOpenHouse(item.id);
+      else if (item.type === 'DOCUMENTS') onPermanentDeleteDocument(item.id);
+      else if (item.type === 'FOLDERS') onPermanentDeleteFolder(item.id);
       else if (item.type === 'TEAM_MEMBERS') onPermanentDeleteUser(item.id);
       else if (item.type === 'SOURCES') onPermanentDeleteSource(item.name);
       else if (item.type === 'TAGS') onPermanentDeleteTag(item.name);
@@ -261,6 +324,7 @@ const TrashView: React.FC<TrashViewProps> = ({
           
           <div className="flex bg-slate-100 p-1.5 rounded-2xl overflow-x-auto scrollbar-hide border border-slate-200 shadow-inner">
             <button 
+              type="button"
               onClick={() => { setActiveTab('ALL'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'ALL' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
@@ -268,36 +332,56 @@ const TrashView: React.FC<TrashViewProps> = ({
             </button>
             <div className="w-px h-4 bg-slate-200 self-center mx-2"></div>
             <button 
+              type="button"
               onClick={() => { setActiveTab('LEADS'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'LEADS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Leads ({leads.length})
             </button>
             <button 
+              type="button"
               onClick={() => { setActiveTab('DEALS'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'DEALS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Deals ({deals.length})
             </button>
             <button 
+              type="button"
               onClick={() => { setActiveTab('OPEN_HOUSES'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'OPEN_HOUSES' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Open House ({openHouses.length})
             </button>
             <button 
+              type="button"
+              onClick={() => { setActiveTab('DOCUMENTS'); setSelectedItemIds([]); }}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'DOCUMENTS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Docs ({documents.length})
+            </button>
+            <button 
+              type="button"
+              onClick={() => { setActiveTab('FOLDERS'); setSelectedItemIds([]); }}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'FOLDERS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Folders ({folders.length})
+            </button>
+            <button 
+              type="button"
               onClick={() => { setActiveTab('TEAM_MEMBERS'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'TEAM_MEMBERS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Team ({users.length})
             </button>
             <button 
+              type="button"
               onClick={() => { setActiveTab('SOURCES'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'SOURCES' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Sources ({trashedSources.length})
             </button>
             <button 
+              type="button"
               onClick={() => { setActiveTab('TAGS'); setSelectedItemIds([]); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'TAGS' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
             >
@@ -315,6 +399,7 @@ const TrashView: React.FC<TrashViewProps> = ({
               <div>
                 <p className="text-sm font-black uppercase tracking-widest">Items Selected</p>
                 <button 
+                  type="button"
                   onClick={() => setSelectedItemIds([])}
                   className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 hover:text-white transition-colors"
                 >
@@ -324,6 +409,7 @@ const TrashView: React.FC<TrashViewProps> = ({
             </div>
             <div className="flex items-center space-x-3">
               <button 
+                type="button"
                 onClick={handleBulkRestore}
                 className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-3"
               >
@@ -331,6 +417,7 @@ const TrashView: React.FC<TrashViewProps> = ({
                 <span>Restore All</span>
               </button>
               <button 
+                type="button"
                 onClick={handleBulkDelete}
                 className="px-6 py-3 bg-rose-500 hover:bg-rose-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-3 shadow-lg"
               >
@@ -351,7 +438,7 @@ const TrashView: React.FC<TrashViewProps> = ({
                       type="checkbox" 
                       checked={currentTabItems.length > 0 && selectedItemIds.length === currentTabItems.length}
                       onChange={selectAllCurrent}
-                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm"
+                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer shadow-sm transition-all"
                     />
                   </th>
                   <th className="px-4 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item Details</th>
@@ -393,6 +480,7 @@ const TrashView: React.FC<TrashViewProps> = ({
                     <td className="px-8 py-8 text-right">
                       <div className="flex items-center justify-end space-x-3">
                         <button 
+                          type="button"
                           onClick={() => handleRestore(item)}
                           className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                         >
@@ -400,6 +488,7 @@ const TrashView: React.FC<TrashViewProps> = ({
                           <span>Restore</span>
                         </button>
                         <button 
+                          type="button"
                           onClick={() => handleDelete(item)}
                           className="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
                         >

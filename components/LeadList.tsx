@@ -860,11 +860,11 @@ const LeadList: React.FC<LeadListProps> = ({
              const color = colorPool[(i * 7) % colorPool.length];
              
              return (
-               <div key={i} className={`p-3.5 rounded-2xl border shadow-sm flex items-center space-x-3.5 transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-900 border-slate-800' : `${color.bg} ${color.border}`}`}>
-                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-lg text-white ${color.icon}`}><i className={`fas ${stat.icon}`}></i></div>
+               <div key={i} className={`p-5 rounded-2xl border shadow-sm flex items-center space-x-5 transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-900 border-slate-800' : `${color.bg} ${color.border}`}`}>
+                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg shadow-lg text-white ${color.icon}`}><i className={`fas ${stat.icon}`}></i></div>
                  <div>
-                   <p className={`text-[8px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800 opacity-70'}`}>{stat.label}</p>
-                   <p className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{stat.value}</p>
+                   <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-200' : 'text-slate-800 opacity-70'}`}>{stat.label}</p>
+                   <p className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{stat.value}</p>
                  </div>
                </div>
              );
@@ -925,7 +925,7 @@ const LeadList: React.FC<LeadListProps> = ({
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Lead Source</p>
                       <div className="flex flex-wrap gap-2.5">
                         {availableSources.map(source => (
-                          <button key={source} onClick={() => handleToggleSourceFilter(source)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedSources.includes(source) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-400 hover:border-indigo-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{source}</button>
+                          <button key={source} onClick={() => handleToggleSourceFilter(source)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedSources.includes(source) ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:border-indigo-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{source}</button>
                         ))}
                       </div>
                     </div>
@@ -933,7 +933,7 @@ const LeadList: React.FC<LeadListProps> = ({
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Classification Tags</p>
                       <div className="flex flex-wrap gap-2.5">
                         {availableTags.map(tag => (
-                          <button key={tag} onClick={() => handleToggleTagFilter(tag)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedTags.includes(tag) ? 'bg-slate-900 border-slate-900 text-white shadow-md' : isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-400 hover:border-indigo-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{tag}</button>
+                          <button key={tag} onClick={() => handleToggleTagFilter(tag)} className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${selectedTags.includes(tag) ? 'bg-slate-900 border-slate-900 text-white shadow-md' : isDarkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:border-indigo-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}>{tag}</button>
                         ))}
                       </div>
                     </div>
@@ -1107,11 +1107,11 @@ const LeadList: React.FC<LeadListProps> = ({
       {/* Pagination Controls */}
       <div className={`flex flex-col md:flex-row items-center justify-between border rounded-[2rem] p-8 shadow-sm gap-8 mt-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
         <div className={`flex items-center space-x-4 border rounded-xl px-6 py-3 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-          <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Show:</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Show:</span>
           <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className={`bg-transparent border-none text-sm font-black outline-none cursor-pointer ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
             {[10, 20, 30, 40, 50, 100].map(n => <option key={n} value={n} className={isDarkMode ? 'bg-slate-900' : ''}>{n}</option>)}
           </select>
-          <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">per page</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">per page</span>
         </div>
         <div className="flex flex-col items-center space-y-3">
            <div className="flex items-center space-x-6">

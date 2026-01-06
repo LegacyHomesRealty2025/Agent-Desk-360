@@ -100,7 +100,7 @@ const LeadDetail: React.FC<LeadDetailProps> = ({
       <div className="flex items-center justify-between mb-8">
         <button onClick={onBack} className="flex items-center space-x-3 text-slate-500 hover:text-indigo-600 font-black uppercase tracking-widest text-[11px] transition-all">
           <i className="fas fa-arrow-left"></i>
-          <span>Lead Pipeline</span>
+          <span>All Contacts</span>
         </button>
       </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata, YearlyGoal } from './types.ts';
-import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS, MOCK_GOALS } from './mockData.ts';
+import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata, YearlyGoal, SharedFolder, SharedDocument } from './types.ts';
+import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS, MOCK_GOALS, MOCK_SHARED_FOLDERS, MOCK_SHARED_DOCUMENTS } from './mockData.ts';
 import Layout from './components/Layout.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import LeadList from './components/LeadList.tsx';
@@ -19,6 +19,7 @@ import ProfileView from './components/ProfileView.tsx';
 import LoginView from './components/LoginView.tsx';
 import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
+import DocumentsView from './components/DocumentsView.tsx';
 import { leadIngestionService } from './services/leadIngestionService.ts';
 
 // RESTORE CONTEXT: MOCKED SYSTEM TIME TO 12/28/2026 (Updated per request)
@@ -37,7 +38,7 @@ const DEFAULT_TAGS = [
 
 const TZ = 'America/Los_Angeles';
 
-const DATA_VERSION = '1.0.6';
+const DATA_VERSION = '1.0.8';
 const STORAGE_KEYS = {
   VERSION: 'af_crm_version',
   LEADS: 'af_crm_leads',
@@ -50,7 +51,9 @@ const STORAGE_KEYS = {
   TAGS: 'af_crm_tags',
   TRASHED_SOURCES: 'af_crm_trashed_sources',
   TRASHED_TAGS: 'af_crm_trashed_tags',
-  GOALS: 'af_crm_goals'
+  GOALS: 'af_crm_goals',
+  FOLDERS: 'af_crm_folders',
+  DOCUMENTS: 'af_crm_documents'
 };
 
 export interface NavItemConfig {
@@ -75,6 +78,7 @@ const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'leads', label: 'Leads', icon: 'fa-users' },
   { id: 'contacts', label: 'Contacts', icon: 'fa-address-book' },
   { id: 'open-house', label: 'Open House', icon: 'fa-door-open' },
+  { id: 'documents', label: 'Training Center', icon: 'fa-graduation-cap' },
   { id: 'pipeline', label: 'Transactions', icon: 'fa-file-invoice-dollar' },
   { id: 'reports', label: 'Reports', icon: 'fa-chart-line' },
   { id: 'calendar', label: 'Calendar', icon: 'fa-calendar-alt' },
@@ -150,6 +154,20 @@ const App: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
     if (savedVersion !== DATA_VERSION) return MOCK_GOALS;
     return saved ? JSON.parse(saved) : MOCK_GOALS;
+  });
+
+  const [folders, setFolders] = useState<SharedFolder[]>(() => {
+    const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
+    const saved = localStorage.getItem(STORAGE_KEYS.FOLDERS);
+    if (savedVersion !== DATA_VERSION) return MOCK_SHARED_FOLDERS;
+    return saved ? JSON.parse(saved) : MOCK_SHARED_FOLDERS;
+  });
+
+  const [documents, setDocuments] = useState<SharedDocument[]>(() => {
+    const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
+    const saved = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
+    if (savedVersion !== DATA_VERSION) return MOCK_SHARED_DOCUMENTS;
+    return saved ? JSON.parse(saved) : MOCK_SHARED_DOCUMENTS;
   });
 
   const [sources, setSources] = useState<string[]>(() => {
@@ -253,7 +271,9 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEYS.TRASHED_SOURCES, JSON.stringify(trashedSources));
     localStorage.setItem(STORAGE_KEYS.TRASHED_TAGS, JSON.stringify(trashedTags));
     localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  }, [users, leads, tasks, deals, openHouses, emails, sources, tags, trashedSources, trashedTags, goals]);
+    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+    localStorage.setItem(STORAGE_KEYS.DOCUMENTS, JSON.stringify(documents));
+  }, [users, leads, tasks, deals, openHouses, emails, sources, tags, trashedSources, trashedTags, goals, folders, documents]);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
   
@@ -453,6 +473,7 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'email': return <EmailDashboard emails={accessibleEmails} currentUser={currentUser} onSendEmail={handleSendEmail} onUpdateEmail={handleUpdateEmail} onDeleteEmail={handleDeleteEmail} isDarkMode={isDarkMode} />;
       case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
+      case 'documents': return <DocumentsView currentUser={currentUser} agents={activeUsers} brokerage={brokerage} initialFolders={folders} initialDocuments={documents} onUpdateFolders={setFolders} onUpdateDocuments={setDocuments} isDarkMode={isDarkMode} />;
       case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} isDarkMode={isDarkMode} />;
       case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} isDarkMode={isDarkMode} />;
       case 'pipeline': return <PipelineView deals={accessibleDeals} leads={accessibleLeads} onAddDeal={d => setDeals(prev => [...prev, d])} onUpdateDeal={(id, u) => setDeals(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: true, deletedAt: new Date().toISOString()} : d))} availableSources={sources} />;
@@ -460,7 +481,7 @@ const App: React.FC = () => {
       case 'calendar': return <CalendarView leads={accessibleLeads} tasks={accessibleTasks} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} user={currentUser} />;
       case 'lead-detail': return selectedLead ? <LeadDetail lead={selectedLead} user={currentUser} onBack={() => setView('contacts')} onAddNote={(id, c) => { const note: LeadNote = { id: `n_${Date.now()}`, content: c, createdAt: new Date().toISOString(), authorId: currentUser.id, authorName: `${currentUser.firstName} ${currentUser.lastName}` }; setLeads(prev => prev.map(l => l.id === id ? {...l, notes: [note, ...l.notes]} : l)); }} onUpdateLead={u => setLeads(prev => prev.map(l => l.id === u.id ? u : l))} availableSources={sources} availableTags={tags} isDarkMode={isDarkMode} /> : <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'tasks': return <TaskList tasks={accessibleTasks} leads={accessibleLeads} user={currentUser} onAddTask={t => setTasks(prev => [...prev, t])} onUpdateTask={(id, u) => setTasks(prev => prev.map(item => item.id === id ? {...item, ...u} : item))} onDeleteTask={id => setTasks(prev => prev.filter(t => t.id !== id))} />;
-      case 'trash': return <TrashView leads={leads.filter(l => l.isDeleted)} deals={deals.filter(d => d.isDeleted)} openHouses={openHouses.filter(oh => oh.isDeleted)} users={trashedUsers} trashedSources={trashedSources} trashedTags={trashedTags} onRestoreLead={id => setLeads(prev => prev.map(l => l.id === id ? {...l, isDeleted: false} : l))} onRestoreDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: false} : d))} onRestoreOpenHouse={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: false } : oh))} onRestoreUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: false} : u))} onRestoreSource={handleRestoreSource} onRestoreTag={handleRestoreTag} onBulkRestoreLeads={ids => setLeads(prev => prev.map(l => ids.includes(l.id) ? {...l, isDeleted: false} : l))} onBulkRestoreDeals={ids => setDeals(prev => prev.map(d => ids.includes(d.id) ? {...d, isDeleted: false} : d))} onBulkRestoreOpenHouses={ids => setOpenHouses(prev => prev.map(oh => ids.includes(oh.id) ? { ...oh, isDeleted: false } : oh))} onPermanentDeleteLead={id => setLeads(prev => prev.filter(l => l.id !== id))} onPermanentDeleteDeal={id => setDeals(prev => prev.filter(d => d.id !== id))} onPermanentDeleteOpenHouse={id => setOpenHouses(prev => prev.filter(oh => oh.id !== id))} onPermanentDeleteUser={id => setUsers(prev => prev.filter(u => u.id !== id))} onPermanentDeleteSource={handlePermanentDeleteSource} onPermanentDeleteTag={handlePermanentDeleteTag} onBulkPermanentDeleteLeads={ids => setLeads(prev => prev.filter(l => !ids.includes(l.id)))} onBulkPermanentDeleteDeals={ids => setDeals(prev => prev.filter(d => !ids.includes(d.id)))} onBulkPermanentDeleteOpenHouses={ids => setOpenHouses(prev => prev.filter(oh => !ids.includes(oh.id)))} />;
+      case 'trash': return <TrashView leads={leads.filter(l => l.isDeleted)} deals={deals.filter(d => d.isDeleted)} openHouses={openHouses.filter(oh => oh.isDeleted)} users={trashedUsers} documents={documents.filter(d => d.isDeleted)} folders={folders.filter(f => f.isDeleted)} trashedSources={trashedSources} trashedTags={trashedTags} onRestoreLead={id => setLeads(prev => prev.map(l => l.id === id ? {...l, isDeleted: false} : l))} onRestoreDeal={id => setDeals(prev => prev.map(d => d.id === id ? {...d, isDeleted: false} : d))} onRestoreOpenHouse={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: false } : oh))} onRestoreUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: false} : u))} onRestoreDocument={id => setDocuments(prev => prev.map(d => d.id === id ? { ...d, isDeleted: false } : d))} onRestoreFolder={id => setFolders(prev => prev.map(f => f.id === id ? { ...f, isDeleted: false } : f))} onRestoreSource={handleRestoreSource} onRestoreTag={handleRestoreTag} onBulkRestoreLeads={ids => setLeads(prev => prev.map(l => ids.includes(l.id) ? {...l, isDeleted: false} : l))} onBulkRestoreDeals={ids => setDeals(prev => prev.map(d => ids.includes(d.id) ? {...d, isDeleted: false} : d))} onBulkRestoreOpenHouses={ids => setOpenHouses(prev => prev.map(oh => ids.includes(oh.id) ? { ...oh, isDeleted: false } : oh))} onPermanentDeleteLead={id => setLeads(prev => prev.filter(l => l.id !== id))} onPermanentDeleteDeal={id => setDeals(prev => prev.filter(d => d.id !== id))} onPermanentDeleteOpenHouse={id => setOpenHouses(prev => prev.filter(oh => oh.id !== id))} onPermanentDeleteUser={id => setUsers(prev => prev.filter(u => u.id !== id))} onPermanentDeleteDocument={id => setDocuments(prev => prev.filter(d => d.id !== id))} onPermanentDeleteFolder={id => setFolders(prev => prev.filter(f => f.id !== id))} onPermanentDeleteSource={handlePermanentDeleteSource} onPermanentDeleteTag={handlePermanentDeleteTag} onBulkPermanentDeleteLeads={ids => setLeads(prev => prev.filter(l => !ids.includes(l.id)))} onBulkPermanentDeleteDeals={ids => setDeals(prev => prev.filter(d => !ids.includes(d.id)))} onBulkPermanentDeleteOpenHouses={ids => setOpenHouses(prev => prev.filter(oh => !ids.includes(oh.id)))} onBulkPermanentDeleteFolders={ids => setFolders(prev => prev.filter(f => !ids.includes(f.id)))} onBulkPermanentDeleteDocuments={ids => setDocuments(prev => prev.filter(d => !ids.includes(d.id)))} onBulkPermanentDeleteUsers={ids => setUsers(prev => prev.filter(u => !ids.includes(u.id)))} />;
       case 'settings': return <SettingsView availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} onTrashSource={handleTrashSource} onTrashTag={handleTrashTag} navItems={navItems} onUpdateNavItems={setNavItems} brokerage={brokerage} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
       case 'profile': return <ProfileView user={currentUser} brokerage={brokerage} onUpdate={handleUpdateSelf} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
       case 'team': return <TeamView users={activeUsers} currentUser={currentUser} onAddUser={u => setUsers(prev => [...prev, u])} onUpdateUser={handleUpdateOtherUser} onDeleteUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: true, deletedAt: new Date().toISOString()} : u))} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} />;

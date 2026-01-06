@@ -173,7 +173,6 @@ const Layout: React.FC<LayoutProps> = ({
                 className={`flex items-center space-x-4 p-3.5 rounded-2xl transition-all duration-300 hover:bg-white/10 group ${isCollapsed ? 'justify-center' : ''} ${brokerAdminButtonClass}`}
                 title={isViewingAsAgent ? "Return to Global Overview" : "Broker Control Center"}
               >
-                {/* Fixed invalid style string which was incorrectly passed as a prop, breaking JSX parsing */}
                 <i className={`fas ${isViewingAsAgent ? 'fa-arrow-left' : 'fa-user-shield'} text-base`}></i>
                 {!isCollapsed && (
                   <div className="text-left flex-1 overflow-hidden">
@@ -246,7 +245,7 @@ const Layout: React.FC<LayoutProps> = ({
                  onClick={() => setView('dashboard')}
                  className={`text-3xl font-black capitalize tracking-tighter cursor-pointer hover:text-indigo-600 transition-colors leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
                >
-                 {currentView === 'lead-detail' ? 'Lead Profile' : currentView.replace('-', ' ')}
+                 {currentView === 'lead-detail' ? 'Contact Details' : currentView.replace('-', ' ')}
                </h1>
                <div className="flex items-center space-x-3 mt-1.5">
                  <span className="text-[10px] font-bold text-slate-400 tracking-[0.15em]">Agent Desk <span className="text-indigo-500">360</span></span>

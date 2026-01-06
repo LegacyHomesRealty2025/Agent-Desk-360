@@ -1,4 +1,4 @@
-import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse, EmailMessage, YearlyGoal } from './types.ts';
+import { User, UserRole, Lead, LeadStatus, LeadTemperature, Brokerage, Task, Deal, OpenHouse, EmailMessage, YearlyGoal, SharedFolder, SharedDocument } from './types.ts';
 
 export const MOCK_BROKERAGE: Brokerage = {
   id: 'brk_7721',
@@ -42,6 +42,22 @@ export const MOCK_BROKER: User = {
   avatar: 'https://picsum.photos/seed/broker1/200',
   licenseNumber: 'DRE Lic #01507253'
 };
+
+export const MOCK_SHARED_FOLDERS: SharedFolder[] = [
+  { id: 'f_onboarding', name: 'Agent Onboarding', icon: 'fa-user-plus', createdAt: '2025-01-01T10:00:00Z' },
+  { id: 'f_contracts', name: 'Contract Templates', icon: 'fa-file-signature', createdAt: '2025-01-02T10:00:00Z' },
+  { id: 'f_training', name: 'Sales Training Videos', icon: 'fa-play-circle', createdAt: '2025-01-03T10:00:00Z' },
+  { id: 'f_marketing', name: 'Brand Guidelines', icon: 'fa-palette', createdAt: '2025-01-04T10:00:00Z' },
+];
+
+export const MOCK_SHARED_DOCUMENTS: SharedDocument[] = [
+  { id: 'd_1', folderId: 'f_onboarding', name: 'New Agent Checklist.pdf', type: 'PDF', url: '#', createdAt: '2025-01-10T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1', size: '1.2 MB' },
+  { id: 'd_2', folderId: 'f_contracts', name: 'Purchase Agreement Standard.doc', type: 'DOC', url: '#', createdAt: '2025-01-11T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1', size: '450 KB' },
+  { id: 'd_3', folderId: 'f_training', name: 'Objection Handling Workshop', type: 'VIDEO', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', createdAt: '2025-01-12T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1' },
+  { id: 'd_4', folderId: 'f_marketing', name: 'Corporate Headshot Tips.jpg', type: 'IMAGE', url: 'https://picsum.photos/seed/tips/800/600', createdAt: '2025-01-13T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1', size: '2.5 MB' },
+  { id: 'd_5', folderId: 'f_onboarding', name: 'Brokerage Handbook 2025', type: 'PDF', url: '#', createdAt: '2025-01-14T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1', size: '5.8 MB' },
+  { id: 'd_6', folderId: 'f_training', name: 'NAR Settlement Training Link', type: 'LINK', url: 'https://www.nar.realtor/', createdAt: '2025-01-15T12:00:00Z', uploadedBy: 'Josephine Sharma', uploadedById: 'broker_1' },
+];
 
 const getRandomDate = (start: Date, end: Date) => {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString();
