@@ -114,50 +114,38 @@ const OpenHouseView: React.FC<OpenHouseViewProps> = ({
   return (
     <div className="space-y-10 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-32 text-[12px]">
       {/* Analytics Dashboard Header */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-4 bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group gap-6">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-20 -mt-20 blur-3xl transition-transform group-hover:scale-110"></div>
-           <div className="relative z-10 flex-1">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Open House Hub</h2>
-              <p className="text-slate-500 font-medium mt-1">Manage tours and track real-time visitor conversion.</p>
-              
-              {/* Search Bar Integration */}
-              <div className="mt-6 relative max-w-md group">
-                <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
-                <input 
-                  type="text" 
-                  placeholder="Search address or agent..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all"
-                />
-              </div>
-           </div>
-           
-           <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10">
-              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
-                <button onClick={() => setDisplayMode('tile')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'tile' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tile View"><i className="fas fa-th-large"></i></button>
-                <button onClick={() => setDisplayMode('list')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list-ul"></i></button>
-              </div>
-              <button 
-                onClick={handleOpenCreate}
-                className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center space-x-3 active:scale-95 whitespace-nowrap"
-              >
-                <i className="fas fa-plus"></i>
-                <span>New Event</span>
-              </button>
-           </div>
-        </div>
-        
-        <div className="bg-slate-900 p-6 rounded-[2.5rem] text-white flex flex-col justify-between group h-32 lg:h-auto">
-           <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-[10px]">Total Visitors</p>
-           <div className="flex items-end justify-between">
-              <p className="text-4xl font-black tracking-tighter">{stats.visitors.toLocaleString()}</p>
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-                 <i className="fas fa-users text-sm"></i>
-              </div>
-           </div>
-        </div>
+      <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group gap-6 w-full">
+         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-20 -mt-20 blur-3xl transition-transform group-hover:scale-110"></div>
+         <div className="relative z-10 flex-1">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Open House Hub</h2>
+            <p className="text-slate-500 font-medium mt-1">Manage tours and track real-time visitor conversion.</p>
+            
+            {/* Search Bar Integration */}
+            <div className="mt-6 relative max-w-md group">
+              <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+              <input 
+                type="text" 
+                placeholder="Search address or agent..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all"
+              />
+            </div>
+         </div>
+         
+         <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10">
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+              <button onClick={() => setDisplayMode('tile')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'tile' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tile View"><i className="fas fa-th-large"></i></button>
+              <button onClick={() => setDisplayMode('list')} className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${displayMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list-ul"></i></button>
+            </div>
+            <button 
+              onClick={handleOpenCreate}
+              className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all flex items-center space-x-3 active:scale-95 whitespace-nowrap"
+            >
+              <i className="fas fa-plus"></i>
+              <span>New Event</span>
+            </button>
+         </div>
       </div>
 
       {/* Main Content Render */}

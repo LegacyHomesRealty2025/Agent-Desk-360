@@ -686,17 +686,31 @@ const ContactList: React.FC<ContactListProps> = ({
       {/* Stats Ribbon */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Total Contacts', value: stats.total, icon: 'fa-address-book', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Buyers', value: stats.buyers, icon: 'fa-cart-shopping', color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Sellers', value: stats.sellers, icon: 'fa-house-signal', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Investors', value: stats.investors, icon: 'fa-chart-pie', color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Past Clients', value: stats.pastClients, icon: 'fa-clock-rotate-left', color: 'text-amber-600', bg: 'bg-amber-50' }
-        ].map((stat, i) => (
-          <div key={i} className={`p-4 rounded-2xl border shadow-sm flex items-center space-x-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center text-sm shadow-sm`}><i className={`fas ${stat.icon}`}></i></div>
-            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p><p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{stat.value}</p></div>
-          </div>
-        ))}
+          { label: 'Total Contacts', value: stats.total, icon: 'fa-address-book' },
+          { label: 'Buyers', value: stats.buyers, icon: 'fa-cart-shopping' },
+          { label: 'Sellers', value: stats.sellers, icon: 'fa-house-signal' },
+          { label: 'Investors', value: stats.investors, icon: 'fa-chart-pie' },
+          { label: 'Past Clients', value: stats.pastClients, icon: 'fa-clock-rotate-left' }
+        ].map((stat, i) => {
+          const colorPool = [
+            { bg: 'bg-indigo-50', border: 'border-indigo-100', icon: 'bg-indigo-600', text: 'text-indigo-900' },
+            { bg: 'bg-blue-50', border: 'border-blue-100', icon: 'bg-blue-600', text: 'text-blue-900' },
+            { bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'bg-emerald-600', text: 'text-emerald-900' },
+            { bg: 'bg-purple-50', border: 'border-purple-100', icon: 'bg-purple-600', text: 'text-purple-900' },
+            { bg: 'bg-amber-50', border: 'border-amber-100', icon: 'bg-amber-600', text: 'text-amber-900' },
+          ];
+          const color = colorPool[i % colorPool.length];
+          
+          return (
+            <div key={i} className={`p-4 rounded-2xl border shadow-sm flex items-center space-x-4 transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-900 border-slate-800' : `${color.bg} ${color.border}`}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm shadow-lg text-white ${color.icon}`}><i className={`fas ${stat.icon}`}></i></div>
+              <div>
+                <p className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : `${color.text} opacity-70`}`}>{stat.label}</p>
+                <p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>{stat.value}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className={`rounded-[2.5rem] border shadow-sm overflow-hidden overflow-x-auto transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
@@ -760,7 +774,7 @@ const ContactList: React.FC<ContactListProps> = ({
       <div className={`flex flex-col md:flex-row items-center justify-between border rounded-[2rem] p-6 shadow-sm gap-6 mt-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
         <div className={`flex items-center space-x-3 border rounded-xl px-5 py-2 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Show:</span><select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className={`bg-transparent border-none text-xs font-black outline-none cursor-pointer ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>{[10, 20, 50, 100].map(n => <option key={n} value={n} className={isDarkMode ? 'bg-slate-900' : ''}>{n}</option>)}</select><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">per page</span></div>
         <div className="flex flex-col items-center space-y-2"><div className="flex items-center space-x-4"><button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollToTop(); }} className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}><i className="fas fa-chevron-left"></i></button><div className={`text-xs font-black uppercase tracking-[0.2em] px-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Page {currentPage} of {totalPages || 1}</div><button disabled={currentPage >= totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}><i className="fas fa-chevron-right"></i></button></div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Showing {paginatedLeads.length} of {filteredAndSortedLeads.length} contacts</p></div>
-        <button onClick={scrollToTop} className="flex items-center space-x-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all"><i className="fas fa-arrow-up"></i><span>Back to Top</span></button>
+        <button onClick={scrollToTop} className="flex items-center space-x-3 px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all"><i className="fas fa-arrow-up"></i><span>Back to Top</span></button>
       </div>
 
       {/* Bulk Tag Modal */}
