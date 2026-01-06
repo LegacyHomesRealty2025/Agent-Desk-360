@@ -115,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return parseInt(val);
   };
 
-  const laNow = new Date('2025-12-28T09:00:00'); // Consistent with App.tsx mocked time
+  const laNow = new Date('2026-12-28T09:00:00'); // Updated per request
   const currentYear = getLAPart(laNow, 'year');
   const prevYear = currentYear - 1;
 
@@ -250,6 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   ];
 
   const yAxisFormatter = (v: number) => {
+    // Fix: replaced undefined chartMetric with chartView state variable
     if (chartView === 'UNITS') return v.toString();
     if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
     if (v >= 1000) return `$${(v / 1000).toFixed(0)}k`;
@@ -289,7 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               {viewingAgentId === 'TEAM' ? 'Team' : `${selectedAgentData?.firstName} ${selectedAgentData?.lastName}`} Production
             </h1>
           </div>
-          <p className="text-slate-500 font-semibold text-lg">Real-time performance metrics and pipeline health for {currentYear}.</p>
+          <p className="text-slate-500 font-semibold text-lg">Real-time performance metrics for {currentYear}.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 relative z-20 w-full md:w-auto">
@@ -297,9 +298,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="relative w-full sm:w-auto">
               <button 
                 onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
-                className={`w-full sm:w-auto px-6 py-4 border rounded-xl flex items-center justify-between space-x-4 transition-all shadow-sm group/btn ${
+                className={`w-full sm:w-auto px-6 py-4 border rounded-[1.25rem] flex items-center justify-between space-x-4 transition-all shadow-[0_10px_25px_rgba(99,102,241,0.2)] group/btn ${
                   viewingAgentId === 'TEAM' 
-                    ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-900/20' 
+                    ? 'bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-900/30' 
                     : isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
@@ -351,12 +352,12 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
           {user.role === UserRole.BROKER && (
-            <button onClick={handleOpenInvite} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-95">
+            <button onClick={handleOpenInvite} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-95">
               <i className="fas fa-paper-plane"></i>
               <span>Invite Agent</span>
             </button>
           )}
-          <button onClick={() => onNavigate('pipeline')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-95">
+          <button onClick={() => onNavigate('pipeline')} className="bg-indigo-600 text-white px-8 py-4 rounded-[1.25rem] font-black uppercase tracking-widest shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-95">
             <i className="fas fa-plus"></i>
             <span>New Transaction</span>
           </button>
@@ -447,7 +448,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                      <span className={`${isDarkMode ? 'text-amber-400' : 'text-amber-600'} font-black`}>{commissionProgress.pending.toFixed(1)}%</span>
                    </div>
                    <div className={`h-2.5 w-full rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-                    <div className="h-full bg-amber-500 rounded-full shadow-lg shadow-amber-500/30 transition-all duration-1000" style={{ width: `${commissionProgress.pending}%` }}></div>
+                    <div className="h-full bg-amber-50 rounded-full shadow-lg shadow-amber-500/30 transition-all duration-1000" style={{ width: `${commissionProgress.pending}%` }}></div>
                   </div>
                 </div>
                 <div className="space-y-2">

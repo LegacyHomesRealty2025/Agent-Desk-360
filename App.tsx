@@ -21,8 +21,8 @@ import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
 import { leadIngestionService } from './services/leadIngestionService.ts';
 
-// RESTORE CONTEXT: MOCKED SYSTEM TIME TO 12/28/2025
-const MOCKED_NOW = new Date('2025-12-28T09:00:00');
+// RESTORE CONTEXT: MOCKED SYSTEM TIME TO 12/28/2026 (Updated per request)
+const MOCKED_NOW = new Date('2026-12-28T09:00:00');
 
 const DEFAULT_SOURCES = [
   'Zillow', 'Realtor.com', 'Friend', 'Broker Referral', 'Open House', 

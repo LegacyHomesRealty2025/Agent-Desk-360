@@ -493,7 +493,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
              <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner w-fit">
                <button onClick={() => { setYearFilter('CURRENT'); setStatusFilter('ALL'); }} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${yearFilter === 'CURRENT' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>Current Year</button>
                <div className="relative">
-                 <button onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center space-x-3 ${typeof yearFilter === 'number' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>
+                 <button onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center space-x-3 ${typeof yearFilter === 'number' ? `bg-white shadow-sm text-indigo-600` : 'text-slate-500 hover:text-slate-700'}`}>
                    <span>{typeof yearFilter === 'number' ? `Year ${yearFilter}` : 'History'}</span>
                    <i className={`fas fa-chevron-down text-[8px] transition-transform ${isYearDropdownOpen ? 'rotate-180' : ''}`}></i>
                  </button>
@@ -549,12 +549,12 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                   <div className="flex items-center space-x-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg shadow-lg ${getStatusIconStyles(status)}`}><i className={`fas ${status === 'ACTIVE' ? 'fa-bolt-lightning' : status === 'PENDING' ? 'fa-hourglass-half' : 'fa-check-double'}`}></i></div>
                     <div className="text-left">
-                       <h3 className="text-xl font-black uppercase tracking-tighter leading-none">{status === 'CLOSED' ? 'Sold' : status}</h3>
-                       <div className="flex flex-col mt-1">
-                          <p className="text-[9px] font-bold uppercase tracking-widest">{statusDeals.length} Items</p>
-                          <p className="text-[8px] font-black uppercase tracking-tighter opacity-90 flex items-center mt-0.5">
-                            <span>Click for full page</span>
-                            <i className="fas fa-arrow-up-right-from-square ml-1.5"></i>
+                       <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">{status === 'CLOSED' ? 'Sold' : status}</h3>
+                       <div className="flex flex-col mt-3">
+                          <p className="text-[11px] font-bold uppercase tracking-widest">{statusDeals.length} Items</p>
+                          <p className="text-[11px] font-black uppercase tracking-[0.35em] opacity-100 flex items-center mt-3 filter drop-shadow-sm">
+                            <span className="antialiased">Click for full page</span>
+                            <i className="fas fa-arrow-up-right-from-square ml-3 shadow-sm"></i>
                           </p>
                        </div>
                     </div>
@@ -847,7 +847,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                 {/* 5. TRANSACTION COORDINATOR INFORMATION */}
                 <div id="sec-tc" className="bg-white border-2 border-purple-100 rounded-[2.5rem] p-10 shadow-sm space-y-10">
                    <div className="flex items-center space-x-4 border-b border-purple-50 pb-6">
-                      <div className="w-10 h-10 bg-purple-500 text-white rounded-xl flex items-center justify-center"><i className="fas fa-user-gear"></i></div>
+                      <div className="w-10 h-10 bg-purple-500 text-white rounded-xl flex items-center justify-center text-sm shadow-lg"><i className="fas fa-user-gear"></i></div>
                       <h4 className="text-lg font-black text-purple-600 uppercase tracking-widest">5. TC Information</h4>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -860,7 +860,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                 {/* 6. TIMELINE INFORMATION */}
                 <div id="sec-timeline" className="bg-white border-2 border-slate-200 rounded-[2.5rem] p-10 shadow-sm space-y-10">
                    <div className="flex items-center space-x-4 border-b border-slate-100 pb-6">
-                      <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center"><i className="fas fa-calendar-check"></i></div>
+                      <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-base shadow-lg"><i className="fas fa-calendar-check"></i></div>
                       <h4 className="text-lg font-black text-slate-800 uppercase tracking-widest">6. Timeline Information</h4>
                    </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -874,7 +874,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                 {/* 7. NOTES INFORMATION */}
                 <div id="sec-notes" className="bg-white border-2 border-indigo-200 rounded-[2.5rem] p-10 shadow-sm space-y-8 pb-12">
                    <div className="flex items-center space-x-4 border-b border-indigo-100 pb-6">
-                      <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center"><i className="fas fa-pen-nib"></i></div>
+                      <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-base shadow-lg"><i className="fas fa-pen-nib"></i></div>
                       <h4 className="text-lg font-black text-indigo-800 uppercase tracking-widest">7. Notes Information</h4>
                    </div>
                    <div className="space-y-6">

@@ -41,6 +41,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ leads, tasks, onSelectLead,
   const [selectedDayDetail, setSelectedDayDetail] = useState<number | null>(null);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskToDeleteId, setTaskToDeleteId] = useState<string | null>(null);
   const [nowPos, setNowPos] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1); // 0.6 to 2.0
   
@@ -245,7 +246,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ leads, tasks, onSelectLead,
       priority: task.priority,
       leadId: task.leadId || ''
     });
-    document.getElementById('task-form-section')?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      document.getElementById('task-form-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleTimelineClick = (hour: number, e: React.MouseEvent) => {
@@ -424,7 +427,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ leads, tasks, onSelectLead,
                     </div>
                     <div className="space-y-1.5 overflow-hidden">
                       {dayEvents.slice(0, Math.max(1, Math.floor(zoomLevel * 3))).map(e => (
-                        <div key={e.id} className={`px-2.5 py-1 rounded-lg text-[9px] font-black border truncate shadow-sm ${getEventStyles(e)} ${e.type === 'TASK' && (e.originalItem as Task).isCompleted ? 'opacity-30 line-through grayscale' : ''}`}>
+                        <div 
+                          key={e.id} 
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            if (e.type === 'TASK') {
+                              handleDayClick(day);
+                              handleEditTask(e.originalItem as Task);
+                            } else {
+                              onSelectLead?.(e.originalItem as Lead);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[9px] font-black border truncate shadow-sm hover:scale-105 transition-transform ${getEventStyles(e)} ${e.type === 'TASK' && (e.originalItem as Task).isCompleted ? 'opacity-30 line-through grayscale' : ''}`}
+                        >
                           {e.title}
                         </div>
                       ))}
@@ -623,12 +638,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ leads, tasks, onSelectLead,
                     <div className="grid grid-cols-1 gap-4 pt-4">
                        <button type="submit" className={`w-full py-8 rounded-[2.5rem] font-black uppercase tracking-[0.4em] shadow-2xl transition-all flex items-center justify-center space-x-6 hover:scale-[1.02] active:scale-[0.98] ${editingTaskId ? 'bg-amber-500 text-slate-950' : 'bg-indigo-600 text-white shadow-indigo-900/50'}`}>
                           <i className={`fas ${editingTaskId ? 'fa-save' : 'fa-bolt'} text-xl`}></i>
-                          <span>{editingTaskId ? 'Save Modifications' : 'Initialize Activity'}</span>
+                          <span>{editingTaskId ? 'Save Modifications' : 'Save Activity'}</span>
                        </button>
                        {editingTaskId && (
                           <button 
                             type="button" 
-                            onClick={() => onDeleteTask?.(editingTaskId)}
+                            onClick={() => setTaskToDeleteId(editingTaskId)}
                             className="w-full py-6 bg-rose-600/10 text-rose-500 rounded-[2.5rem] font-black uppercase tracking-[0.4em] hover:bg-rose-600 hover:text-white transition-all border-2 border-rose-500/20"
                           >
                             Delete Record
@@ -675,9 +690,38 @@ const CalendarView: React.FC<CalendarViewProps> = ({ leads, tasks, onSelectLead,
 
               <div className="pt-8 flex space-x-6">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-6 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-[0.3em] text-xs transition-all hover:bg-slate-200">Discard</button>
-                <button type="submit" className="flex-1 py-6 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-98">Deploy Task</button>
+                <button type="submit" className="flex-1 py-6 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-98">Save Activity</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {taskToDeleteId && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setTaskToDeleteId(null)}></div>
+          <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-200 w-full max-w-md p-12 relative z-10 animate-in zoom-in-95 duration-200 text-center">
+             <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner border border-rose-100">
+                <i className="fas fa-trash-can"></i>
+             </div>
+             <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Trash Record?</h3>
+             <p className="text-slate-500 font-semibold leading-relaxed mb-10">
+               Are you sure you want to permanently delete this activity? This operation cannot be reversed.
+             </p>
+             <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setTaskToDeleteId(null)} className="py-5 bg-slate-100 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Cancel</button>
+                <button 
+                  onClick={() => {
+                    onDeleteTask?.(taskToDeleteId);
+                    setTaskToDeleteId(null);
+                    setEditingTaskId(null);
+                  }} 
+                  className="py-5 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-rose-100 hover:bg-rose-700 transition-all active:scale-95"
+                >
+                  Confirm Delete
+                </button>
+             </div>
           </div>
         </div>
       )}

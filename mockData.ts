@@ -61,8 +61,8 @@ const generatedLeads: Lead[] = firstNames.map((fname, i) => {
   const tempValues = Object.values(LeadTemperature);
   
   const day = (i * 5) + 1;
-  let dob = `2025-12-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
-  let weddingAnniversary = i % 2 === 0 ? `2025-12-${(day + 1).toString().padStart(2, '0')}T12:00:00.000Z` : undefined;
+  let dob = `2026-12-${day.toString().padStart(2, '0')}T12:00:00.000Z`;
+  let weddingAnniversary = i % 2 === 0 ? `2026-12-${(day + 1).toString().padStart(2, '0')}T12:00:00.000Z` : undefined;
   
   return {
     id: `lead_${i + 1}`,
@@ -80,8 +80,8 @@ const generatedLeads: Lead[] = firstNames.map((fname, i) => {
     propertyAddress: `${Math.floor(Math.random() * 9999)} ${streetNames[i]}, ${cities[i]}, PA`,
     budget: budget,
     notes: [],
-    createdAt: getRandomDate(new Date(2024, 0, 1), new Date()),
-    updatedAt: new Date().toISOString(),
+    createdAt: getRandomDate(new Date(2025, 0, 1), new Date('2026-12-28')),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: budget * 0.03,
     dob,
     weddingAnniversary
@@ -106,11 +106,11 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: '1725 Slough Ave, Scranton, PA',
     budget: 850000,
     notes: [],
-    createdAt: new Date('2025-05-15').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2026-05-15').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 25500,
     dob: '1965-03-15T12:00:00.000Z',
-    weddingAnniversary: '2025-02-14T12:00:00.000Z',
+    weddingAnniversary: '2026-02-14T12:00:00.000Z',
     spouseFirstName: 'Jan',
     spouseLastName: 'Levinson',
     spouseEmail: 'jan@whitepages.com',
@@ -133,11 +133,11 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: '42 Wallaby Way, Scranton, PA',
     budget: 450000,
     notes: [],
-    createdAt: new Date('2025-08-10').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2026-08-10').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 13500,
     dob: '1979-10-01T12:00:00.000Z',
-    weddingAnniversary: '2025-10-08T12:00:00.000Z',
+    weddingAnniversary: '2026-10-08T12:00:00.000Z',
     spouseFirstName: 'Pam',
     spouseLastName: 'Beesly',
     spouseEmail: 'pam.b@art.com',
@@ -160,11 +160,11 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: 'Beet Farm Road, Honesdale, PA',
     budget: 1200000,
     notes: [],
-    createdAt: new Date('2024-11-20').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2025-11-20').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 36000,
     dob: '1970-01-20T12:00:00.000Z',
-    weddingAnniversary: '2025-11-20T12:00:00.000Z',
+    weddingAnniversary: '2026-11-20T12:00:00.000Z',
     spouseFirstName: 'Angela',
     spouseLastName: 'Martin',
     spouseEmail: 'angela.m@cats.com',
@@ -187,11 +187,11 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: '12 Florida Blvd, Scranton, PA',
     budget: 600000,
     notes: [],
-    createdAt: new Date('2025-12-01').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2026-12-01').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 18000,
     dob: '1958-02-12T12:00:00.000Z',
-    weddingAnniversary: '2025-06-12T12:00:00.000Z',
+    weddingAnniversary: '2026-06-12T12:00:00.000Z',
     spouseFirstName: 'Teri',
     spouseLastName: 'Hudson',
     spouseEmail: 'teri.h@example.com',
@@ -214,11 +214,11 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: '99 Refrigeration Ln, Scranton, PA',
     budget: 950000,
     notes: [],
-    createdAt: new Date('2025-09-22').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2026-09-22').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 28500,
     dob: '1961-07-10T12:00:00.000Z',
-    weddingAnniversary: '2025-12-25T12:00:00.000Z',
+    weddingAnniversary: '2026-12-25T12:00:00.000Z',
     spouseFirstName: 'Bob',
     spouseLastName: 'Vance',
     spouseEmail: 'bobv@vancerefrig.com',
@@ -241,8 +241,8 @@ const NEW_HIGH_FIDELITY_LEADS: Lead[] = [
     propertyAddress: '777 Milestone Way, Scranton, PA',
     budget: 2000000,
     notes: [],
-    createdAt: new Date('2025-12-01').toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: new Date('2026-12-01').toISOString(),
+    updatedAt: new Date('2026-12-28').toISOString(),
     estimatedDealValue: 60000,
     dob: '1985-12-28T12:00:00.000Z', // Birthday Today!
   }
@@ -272,8 +272,8 @@ const generatedDeals: Deal[] = generatedLeads.map((lead, i) => {
     commissionPercentage: parseFloat(commissionPercentage.toFixed(2)),
     commissionAmount: parseFloat(commissionAmount.toFixed(2)),
     date: status === 'CLOSED' 
-      ? getRandomDate(new Date(2024, 0, 1), new Date()) 
-      : `2025-12-${(i + 15).toString().padStart(2, '0')}T12:00:00.000Z`,
+      ? getRandomDate(new Date(2025, 0, 1), new Date('2026-12-28')) 
+      : `2026-12-${(i + 15).toString().padStart(2, '0')}T12:00:00.000Z`,
     source: lead.source
   };
 });
@@ -292,7 +292,7 @@ const DETAILED_MOCK_DEALS: Deal[] = [
     salePrice: 850000,
     commissionPercentage: 3,
     commissionAmount: 25500,
-    date: '2026-01-30T12:00:00.000Z',
+    date: '2027-01-30T12:00:00.000Z',
     source: 'Referral',
     escrowCompany: 'Scranton Escrow Co.',
     escrowOfficer: 'Creed Bratton',
@@ -320,7 +320,7 @@ const DETAILED_MOCK_DEALS: Deal[] = [
     salePrice: 450000,
     commissionPercentage: 3,
     commissionAmount: 13500,
-    date: '2026-01-05T12:00:00.000Z', // 8 days from Dec 28
+    date: '2027-01-05T12:00:00.000Z', 
     source: 'Zillow',
     escrowCompany: 'Lakeside Escrow',
     escrowOfficer: 'Phyllis Vance',
@@ -348,7 +348,7 @@ const DETAILED_MOCK_DEALS: Deal[] = [
     salePrice: 1200000,
     commissionPercentage: 3,
     commissionAmount: 36000,
-    date: '2025-11-20T12:00:00.000Z',
+    date: '2026-11-20T12:00:00.000Z',
     source: 'Past Client',
     escrowCompany: 'Farms First Escrow',
     escrowOfficer: 'Mose Schrute',
@@ -376,7 +376,7 @@ const DETAILED_MOCK_DEALS: Deal[] = [
     salePrice: 600000,
     commissionPercentage: 3,
     commissionAmount: 18000,
-    date: '2025-12-30T12:00:00.000Z', // 2 days from Dec 28
+    date: '2026-12-30T12:00:00.000Z', 
     source: 'Facebook',
     escrowCompany: 'Sunset Escrow',
     escrowOfficer: 'Nellie Bertram',
@@ -404,7 +404,7 @@ const DETAILED_MOCK_DEALS: Deal[] = [
     salePrice: 950000,
     commissionPercentage: 3,
     commissionAmount: 28500,
-    date: '2026-03-15T12:00:00.000Z',
+    date: '2027-03-15T12:00:00.000Z',
     source: 'Google',
     escrowCompany: 'Industrial Escrow',
     escrowOfficer: 'Hank the Guard',
@@ -433,7 +433,7 @@ export const MOCK_TASKS: Task[] = MOCK_LEADS.map((lead, i) => {
     leadId: lead.id,
     title: `Follow-up with ${lead.firstName}`,
     description: `Discuss property criteria and next steps.`,
-    dueDate: `2025-12-${day.toString().padStart(2, '0')}T10:00:00.000Z`,
+    dueDate: `2026-12-${day.toString().padStart(2, '0')}T10:00:00.000Z`,
     isCompleted: false,
     priority: i % 2 === 0 ? 'HIGH' : 'MEDIUM'
   };
@@ -446,7 +446,7 @@ MOCK_TASKS.push({
   assignedUserId: 'broker_1',
   title: 'Urgent Pipeline Audit',
   description: 'Complete review of all pending transactions for year-end closing.',
-  dueDate: '2025-12-28T14:00:00.000Z',
+  dueDate: '2026-12-28T14:00:00.000Z',
   isCompleted: false,
   priority: 'HIGH'
 });
@@ -482,7 +482,7 @@ export const MOCK_OPEN_HOUSES: OpenHouse[] = [
     id: 'oh_1',
     brokerageId: 'brk_7721',
     address: '1725 Slough Avenue, Scranton, PA',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date('2026-12-28').toISOString().split('T')[0],
     startTime: '10:00',
     endTime: '14:00',
     assignedAgentId: 'agent_1',
@@ -492,27 +492,34 @@ export const MOCK_OPEN_HOUSES: OpenHouse[] = [
   }
 ];
 
-// Fix: Added missing MOCK_GOALS export
+// Fix: Updated goals to 2026
 export const MOCK_GOALS: YearlyGoal[] = [
   {
     userId: 'agent_1',
-    year: 2025,
+    year: 2026,
     volumeTarget: 10000000,
     unitTarget: 24,
     gciTarget: 300000
   },
   {
     userId: 'agent_2',
-    year: 2025,
+    year: 2026,
     volumeTarget: 8000000,
     unitTarget: 20,
     gciTarget: 240000
   },
   {
     userId: 'broker_1',
-    year: 2025,
+    year: 2026,
     volumeTarget: 50000000,
     unitTarget: 100,
     gciTarget: 1500000
+  },
+  {
+    userId: 'TEAM',
+    year: 2026,
+    volumeTarget: 75000000,
+    unitTarget: 150,
+    gciTarget: 2250000
   }
 ];
