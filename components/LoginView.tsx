@@ -89,7 +89,7 @@ const LoginView: React.FC<LoginViewProps> = ({ users, onLoginSuccess }) => {
               <i className="fas fa-bolt text-white text-2xl"></i>
             </div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3">Agent Desk 360</h1>
-            <p className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">Lead Flow CRM | Secure Access</p>
+            <p className="text-slate-500 font-semibold tracking-wide uppercase text-[10px]">Agent Desk 360 | Secure Access</p>
           </div>
 
           <div className="px-12 pb-16">

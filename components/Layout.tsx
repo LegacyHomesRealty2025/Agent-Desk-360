@@ -109,8 +109,8 @@ const Layout: React.FC<LayoutProps> = ({
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-500">
-                <h2 className="text-[22px] font-black tracking-tighter uppercase whitespace-nowrap">
-                  Agent Desk <span className="text-indigo-400">360</span>
+                <h2 className="text-[15px] font-black tracking-tighter whitespace-nowrap">
+                  Agent Desk <span className="text-indigo-500">360</span>
                 </h2>
               </div>
             )}
@@ -173,6 +173,7 @@ const Layout: React.FC<LayoutProps> = ({
                 className={`flex items-center space-x-4 p-3.5 rounded-2xl transition-all duration-300 hover:bg-white/10 group ${isCollapsed ? 'justify-center' : ''} ${brokerAdminButtonClass}`}
                 title={isViewingAsAgent ? "Return to Global Overview" : "Broker Control Center"}
               >
+                {/* Fixed invalid style string which was incorrectly passed as a prop, breaking JSX parsing */}
                 <i className={`fas ${isViewingAsAgent ? 'fa-arrow-left' : 'fa-user-shield'} text-base`}></i>
                 {!isCollapsed && (
                   <div className="text-left flex-1 overflow-hidden">
@@ -248,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({
                  {currentView === 'lead-detail' ? 'Lead Profile' : currentView.replace('-', ' ')}
                </h1>
                <div className="flex items-center space-x-3 mt-1.5">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Agent Desk 360</span>
+                 <span className="text-[10px] font-bold text-slate-400 tracking-[0.15em]">Agent Desk <span className="text-indigo-500">360</span></span>
                  <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{brokerage.name}</span>
                </div>

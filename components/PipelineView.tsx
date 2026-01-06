@@ -477,7 +477,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     <div className="space-y-8 animate-in fade-in duration-500 text-[12px] pb-40" ref={topRef}>
       
       {/* TOOLBAR */}
-      <div className={`bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-6 ${statusFilter !== 'ALL' ? 'opacity-80 scale-[0.98] pointer-events-none' : ''}`}>
+      <div className={`bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-6`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex-1">
              <h2 className="text-3xl font-black text-slate-800 tracking-tight">Transactions</h2>
