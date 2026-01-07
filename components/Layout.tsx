@@ -96,7 +96,6 @@ const Layout: React.FC<LayoutProps> = ({
   const getPageTitle = (view: string) => {
     if (view === 'lead-detail') return 'Contact Details';
     if (view === 'documents') return 'Training';
-    if (view === 'marketing') return 'Marketing Hub';
     return view.replace('-', ' ');
   };
 
