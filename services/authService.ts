@@ -85,6 +85,36 @@ export const authService = {
     }
   },
 
+  async updateProfile(userId: string, updates: Partial<User>): Promise<User | null> {
+    try {
+      const updateData: any = {};
+
+      if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
+      if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+      if (updates.email !== undefined) updateData.email = updates.email;
+      if (updates.phone !== undefined) updateData.phone = updates.phone;
+      if (updates.licenseNumber !== undefined) updateData.license_number = updates.licenseNumber;
+      if (updates.avatar !== undefined) updateData.avatar_url = updates.avatar;
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update(updateData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return null;
+      }
+
+      return this.getCurrentUser();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return null;
+    }
+  },
+
   async signOut(): Promise<void> {
     await supabase.auth.signOut();
   },

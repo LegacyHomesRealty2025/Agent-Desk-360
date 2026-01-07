@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole, Brokerage } from '../types.ts';
+import { authService } from '../services/authService.ts';
 
 interface ProfileViewProps {
   user: User;
@@ -95,11 +96,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
     }
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    onUpdate(formData);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setIsProcessing(true);
+
+    try {
+      const updatedUser = await authService.updateProfile(user.id, formData);
+
+      if (updatedUser) {
+        onUpdate(updatedUser);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+      } else {
+        console.error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -224,8 +239,19 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user, brokerage, onUpdate, is
           </div>
 
           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6 pt-6">
-            <button type="submit" className="flex-1 py-7 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] shadow-2xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all">
-              Save Profile changes
+            <button
+              type="submit"
+              disabled={isProcessing}
+              className="flex-1 py-7 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.4em] text-[11px] shadow-2xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+            >
+              {isProcessing ? (
+                <>
+                  <i className="fas fa-circle-notch fa-spin"></i>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>Save Profile changes</span>
+              )}
             </button>
             <button type="button" className={`px-12 py-7 rounded-[2rem] font-black uppercase tracking-[0.2em] text-[11px] border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-white hover:shadow-lg'}`}>
               Discard
