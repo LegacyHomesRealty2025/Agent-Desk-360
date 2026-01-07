@@ -17,10 +17,12 @@ import OpenHousePublicForm from './components/OpenHousePublicForm.tsx';
 import TeamView from './components/TeamView.tsx';
 import ProfileView from './components/ProfileView.tsx';
 import LoginView from './components/LoginView.tsx';
+import SignupView from './components/SignupView.tsx';
 import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
 import DocumentsView from './components/DocumentsView.tsx';
 import { leadIngestionService } from './services/leadIngestionService.ts';
+import { supabase } from './lib/supabase.ts';
 
 // RESTORE CONTEXT: MOCKED SYSTEM TIME TO 01/06/2026 (Updated as requested)
 const MOCKED_NOW = new Date('2026-01-06T09:00:00');
@@ -97,8 +99,8 @@ export interface Invitation {
 }
 
 const App: React.FC = () => {
-  // SET TO TRUE BY DEFAULT TO BYPASS LOGIN
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   
   const [users, setUsers] = useState<User[]>(() => {
@@ -259,6 +261,18 @@ const App: React.FC = () => {
   }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.VERSION, DATA_VERSION);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
@@ -370,12 +384,18 @@ const App: React.FC = () => {
     if (currentUser && currentUser.id === updated.id) setCurrentUser(updated);
   };
 
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
+  const handleLoginSuccess = () => {
     setIsAuthenticated(true);
+    setAuthView('login');
   };
 
-  const handleLogout = () => {
+  const handleSignupSuccess = () => {
+    setIsAuthenticated(true);
+    setAuthView('login');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
     setView('dashboard');
   };
@@ -490,7 +510,14 @@ const App: React.FC = () => {
   };
 
   if (inviteId && activeInvitation) return <JoinView invitation={activeInvitation} brokerage={brokerage!} onComplete={handleJoinComplete} />;
-  if (!isAuthenticated) return <LoginView users={users} onLoginSuccess={handleLoginSuccess} />;
+
+  if (!isAuthenticated) {
+    if (authView === 'signup') {
+      return <SignupView onSignupSuccess={handleSignupSuccess} onNavigateToLogin={() => setAuthView('login')} />;
+    }
+    return <LoginView onLoginSuccess={handleLoginSuccess} onNavigateToSignup={() => setAuthView('signup')} />;
+  }
+
   if (!currentUser || !brokerage) return null;
   if (activePublicOpenHouse) { const host = activeUsers.find(a => a.id === activePublicOpenHouse.assignedAgentId); return <OpenHousePublicForm openHouse={activePublicOpenHouse} onSubmit={handlePublicCheckIn} onExit={() => setActivePublicOpenHouse(null)} hostAgent={host} />; }
 
