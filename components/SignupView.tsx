@@ -48,45 +48,29 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
       if (authError) throw authError;
       if (!authData.user) throw new Error('Signup failed');
 
-      let brokerageId: string;
+      const brokerageNameToUse = role === 'BROKER'
+        ? brokerageName
+        : `${firstName} ${lastName} Brokerage`;
 
-      if (role === 'BROKER') {
-        const { data: brokerageData, error: brokerageError } = await supabase
-          .from('brokerages')
-          .insert([{ name: brokerageName }])
-          .select()
-          .single();
-
-        if (brokerageError) throw brokerageError;
-        brokerageId = brokerageData.id;
-      } else {
-        const { data: tempBrokerage, error: tempBrokerageError } = await supabase
-          .from('brokerages')
-          .insert([{ name: `${firstName} ${lastName} Brokerage` }])
-          .select()
-          .single();
-
-        if (tempBrokerageError) throw tempBrokerageError;
-        brokerageId = tempBrokerage.id;
-      }
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([{
-          id: authData.user.id,
-          brokerage_id: brokerageId,
-          email: email.trim(),
-          first_name: firstName,
-          last_name: lastName,
-          role: role,
-          phone: phone || null,
-          license_number: licenseNumber || null,
-        }]);
+      const { data: result, error: profileError } = await supabase.rpc(
+        'create_user_profile_and_brokerage',
+        {
+          p_user_id: authData.user.id,
+          p_email: email.trim(),
+          p_first_name: firstName,
+          p_last_name: lastName,
+          p_role: role,
+          p_brokerage_name: brokerageNameToUse,
+          p_phone: phone || null,
+          p_license_number: licenseNumber || null,
+        }
+      );
 
       if (profileError) throw profileError;
 
       onSignupSuccess();
     } catch (err: any) {
+      console.error('Signup error:', err);
       setError(err.message || 'Failed to sign up. Please try again.');
     } finally {
       setIsLoading(false);
