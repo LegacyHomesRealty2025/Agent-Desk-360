@@ -1,0 +1,102 @@
+import { supabase } from '../lib/supabase.ts';
+import { User, Brokerage, UserRole } from '../types.ts';
+
+interface UserProfile {
+  id: string;
+  brokerage_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  phone: string | null;
+  license_number: string | null;
+  avatar_url: string | null;
+  is_deleted: boolean;
+}
+
+interface BrokerageData {
+  id: string;
+  name: string;
+  subscription_plan: string;
+}
+
+export const authService = {
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) return null;
+
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .eq('is_deleted', false)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        console.error('Profile error:', profileError);
+        return null;
+      }
+
+      const userProfile = profile as UserProfile;
+
+      return {
+        id: userProfile.id,
+        brokerageId: userProfile.brokerage_id,
+        firstName: userProfile.first_name,
+        lastName: userProfile.last_name,
+        email: userProfile.email,
+        role: userProfile.role as UserRole,
+        phone: userProfile.phone || undefined,
+        licenseNumber: userProfile.license_number || undefined,
+        avatar: userProfile.avatar_url || undefined,
+        isDeleted: userProfile.is_deleted,
+      };
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  },
+
+  async getBrokerage(brokerageId: string): Promise<Brokerage | null> {
+    try {
+      const { data, error } = await supabase
+        .from('brokerages')
+        .select('*')
+        .eq('id', brokerageId)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error('Brokerage error:', error);
+        return null;
+      }
+
+      const brokerageData = data as BrokerageData;
+
+      return {
+        id: brokerageData.id,
+        name: brokerageData.name,
+        subscriptionPlan: brokerageData.subscription_plan as 'BASIC' | 'PRO' | 'ENTERPRISE',
+      };
+    } catch (error) {
+      console.error('Error getting brokerage:', error);
+      return null;
+    }
+  },
+
+  async signOut(): Promise<void> {
+    await supabase.auth.signOut();
+  },
+
+  onAuthStateChange(callback: (user: User | null) => void) {
+    return supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const user = await this.getCurrentUser();
+        callback(user);
+      } else {
+        callback(null);
+      }
+    });
+  },
+};

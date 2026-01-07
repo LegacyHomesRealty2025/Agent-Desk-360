@@ -23,6 +23,8 @@ import EmailDashboard from './components/EmailDashboard.tsx';
 import DocumentsView from './components/DocumentsView.tsx';
 import { leadIngestionService } from './services/leadIngestionService.ts';
 import { supabase } from './lib/supabase.ts';
+import { authService } from './services/authService.ts';
+import BrokerAdminPanel from './components/BrokerAdminPanel.tsx';
 
 // RESTORE CONTEXT: MOCKED SYSTEM TIME TO 01/06/2026 (Updated as requested)
 const MOCKED_NOW = new Date('2026-01-06T09:00:00');
@@ -100,21 +102,20 @@ export interface Invitation {
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-  
+
   const [users, setUsers] = useState<User[]>(() => {
     const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
     if (savedVersion !== DATA_VERSION) return [MOCK_BROKER, ...MOCK_AGENTS];
     return saved ? JSON.parse(saved) : [MOCK_BROKER, ...MOCK_AGENTS];
   });
-  
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    return users.find(u => u.role === UserRole.BROKER) || users[0];
-  });
 
-  const [brokerage, setBrokerage] = useState<Brokerage | null>(MOCK_BROKERAGE);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
+  const [showBrokerAdmin, setShowBrokerAdmin] = useState(false);
 
   const [leads, setLeads] = useState<Lead[]>(() => {
     const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
@@ -198,6 +199,43 @@ const App: React.FC = () => {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [activePublicOpenHouse, setActivePublicOpenHouse] = useState<OpenHouse | null>(null);
   const [navItems, setNavItems] = useState<NavItemConfig[]>(INITIAL_NAV_ITEMS);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          const brokerageData = await authService.getBrokerage(user.brokerageId);
+          setBrokerage(brokerageData);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+
+    const { data: subscription } = authService.onAuthStateChange(async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        const brokerageData = await authService.getBrokerage(user.brokerageId);
+        setBrokerage(brokerageData);
+        setIsAuthenticated(true);
+      } else {
+        setCurrentUser(null);
+        setBrokerage(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => {
+      subscription?.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -384,19 +422,31 @@ const App: React.FC = () => {
     if (currentUser && currentUser.id === updated.id) setCurrentUser(updated);
   };
 
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setAuthView('login');
+  const handleLoginSuccess = async () => {
+    const user = await authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      const brokerageData = await authService.getBrokerage(user.brokerageId);
+      setBrokerage(brokerageData);
+      setIsAuthenticated(true);
+    }
   };
 
-  const handleSignupSuccess = () => {
-    setIsAuthenticated(true);
-    setAuthView('login');
+  const handleSignupSuccess = async () => {
+    const user = await authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      const brokerageData = await authService.getBrokerage(user.brokerageId);
+      setBrokerage(brokerageData);
+      setIsAuthenticated(true);
+    }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await authService.signOut();
     setIsAuthenticated(false);
+    setCurrentUser(null);
+    setBrokerage(null);
     setView('dashboard');
   };
 
@@ -509,6 +559,20 @@ const App: React.FC = () => {
     }
   };
 
+  if (isCheckingAuth) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-200">
+            <i className="fas fa-bolt text-white text-2xl animate-pulse" />
+          </div>
+          <p className="text-white font-black text-lg">Agent Desk 360</p>
+          <p className="text-slate-400 text-sm mt-2">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (inviteId && activeInvitation) return <JoinView invitation={activeInvitation} brokerage={brokerage!} onComplete={handleJoinComplete} />;
 
   if (!isAuthenticated) {
@@ -521,7 +585,21 @@ const App: React.FC = () => {
   if (!currentUser || !brokerage) return null;
   if (activePublicOpenHouse) { const host = activeUsers.find(a => a.id === activePublicOpenHouse.assignedAgentId); return <OpenHousePublicForm openHouse={activePublicOpenHouse} onSubmit={handlePublicCheckIn} onExit={() => setActivePublicOpenHouse(null)} hostAgent={host} />; }
 
-  return <Layout user={currentUser} users={activeUsers} brokerage={brokerage} currentView={view} setView={setView} onSwitchUser={handleSwitchUser} onLogout={handleLogout} notifications={notifications} navItems={navItems} onUpdateNavItems={setNavItems} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} dashboardFilterId={dashboardFilterId} onSetDashboardFilterId={setDashboardFilterId}>{renderContent()}</Layout>;
+  return (
+    <>
+      <Layout user={currentUser} users={activeUsers} brokerage={brokerage} currentView={view} setView={setView} onSwitchUser={handleSwitchUser} onLogout={handleLogout} notifications={notifications} navItems={navItems} onUpdateNavItems={setNavItems} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} dashboardFilterId={dashboardFilterId} onSetDashboardFilterId={setDashboardFilterId} onShowBrokerAdmin={() => setShowBrokerAdmin(true)}>
+        {renderContent()}
+      </Layout>
+
+      {showBrokerAdmin && currentUser.role === UserRole.BROKER && (
+        <BrokerAdminPanel
+          currentUser={currentUser}
+          onClose={() => setShowBrokerAdmin(false)}
+          isDarkMode={isDarkMode}
+        />
+      )}
+    </>
+  );
 };
 
 export default App;

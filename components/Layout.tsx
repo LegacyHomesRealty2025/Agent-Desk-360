@@ -23,16 +23,17 @@ interface LayoutProps {
   toggleDarkMode: () => void;
   dashboardFilterId?: string;
   onSetDashboardFilterId?: (id: string) => void;
+  onShowBrokerAdmin?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ 
-  children, 
-  user, 
+const Layout: React.FC<LayoutProps> = ({
+  children,
+  user,
   users,
-  brokerage, 
-  currentView, 
-  setView, 
-  onSwitchUser, 
+  brokerage,
+  currentView,
+  setView,
+  onSwitchUser,
   onLogout,
   notifications,
   navItems,
@@ -40,7 +41,8 @@ const Layout: React.FC<LayoutProps> = ({
   isDarkMode,
   toggleDarkMode,
   dashboardFilterId,
-  onSetDashboardFilterId
+  onSetDashboardFilterId,
+  onShowBrokerAdmin
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -378,7 +380,18 @@ const Layout: React.FC<LayoutProps> = ({
                         </div>
                         <span className="text-xs font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform">Agent Profile</span>
                       </button>
-                      <button 
+                      {user.role === UserRole.BROKER && onShowBrokerAdmin && (
+                        <button
+                          onClick={() => { onShowBrokerAdmin(); setIsProfileDropdownOpen(false); }}
+                          className={`w-full text-left px-6 py-4 flex items-center space-x-4 rounded-2xl transition-all group ${isDarkMode ? 'hover:bg-white/5 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                             <i className="fas fa-users-cog"></i>
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest group-hover:translate-x-1 transition-transform">Manage Team</span>
+                        </button>
+                      )}
+                      <button
                         onClick={() => { setView('settings'); setIsProfileDropdownOpen(false); }}
                         className={`w-full text-left px-6 py-4 flex items-center space-x-4 rounded-2xl transition-all group ${isDarkMode ? 'hover:bg-white/5 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
                       >

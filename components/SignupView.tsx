@@ -7,40 +7,85 @@ interface SignupViewProps {
 }
 
 const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLogin }) => {
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [role, setRole] = useState<'BROKER' | 'AGENT'>('BROKER');
+  const [brokerageName, setBrokerageName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleStepOne = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    setError('');
+    setStep(2);
+  };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Signup failed');
 
-      if (data.user) {
-        onSignupSuccess();
+      let brokerageId: string;
+
+      if (role === 'BROKER') {
+        const { data: brokerageData, error: brokerageError } = await supabase
+          .from('brokerages')
+          .insert([{ name: brokerageName }])
+          .select()
+          .single();
+
+        if (brokerageError) throw brokerageError;
+        brokerageId = brokerageData.id;
+      } else {
+        const { data: tempBrokerage, error: tempBrokerageError } = await supabase
+          .from('brokerages')
+          .insert([{ name: `${firstName} ${lastName} Brokerage` }])
+          .select()
+          .single();
+
+        if (tempBrokerageError) throw tempBrokerageError;
+        brokerageId = tempBrokerage.id;
       }
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([{
+          id: authData.user.id,
+          brokerage_id: brokerageId,
+          email: email.trim(),
+          first_name: firstName,
+          last_name: lastName,
+          role: role,
+          phone: phone || null,
+          license_number: licenseNumber || null,
+        }]);
+
+      if (profileError) throw profileError;
+
+      onSignupSuccess();
     } catch (err: any) {
       setError(err.message || 'Failed to sign up. Please try again.');
     } finally {
@@ -72,7 +117,9 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
 
           <div className="px-12 pb-16">
             <div className="space-y-10 animate-in slide-in-from-left-4 duration-500">
-              <form onSubmit={handleSignupSubmit} className="space-y-6">
+              <form onSubmit={step === 1 ? handleStepOne : handleSignupSubmit} className="space-y-6">
+                {step === 1 ? (
+                  <>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
                   <div className="relative group">
@@ -117,6 +164,82 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
                     />
                   </div>
                 </div>
+                  </>
+                ) : (
+                  <>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">First Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={firstName}
+                    onChange={e => setFirstName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    placeholder="John"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Last Name</label>
+                  <input
+                    required
+                    type="text"
+                    value={lastName}
+                    onChange={e => setLastName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    placeholder="Doe"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">I am a</label>
+                  <select
+                    value={role}
+                    onChange={e => setRole(e.target.value as 'BROKER' | 'AGENT')}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                  >
+                    <option value="BROKER">Broker/Owner</option>
+                    <option value="AGENT">Agent</option>
+                  </select>
+                </div>
+
+                {role === 'BROKER' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Brokerage Name</label>
+                    <input
+                      required
+                      type="text"
+                      value={brokerageName}
+                      onChange={e => setBrokerageName(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                      placeholder="Your Brokerage LLC"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone (Optional)</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">License Number (Optional)</label>
+                  <input
+                    type="text"
+                    value={licenseNumber}
+                    onChange={e => setLicenseNumber(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+                    placeholder="DRE# 12345678"
+                  />
+                </div>
+                  </>
+                )}
 
                 {error && (
                   <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-xl text-[11px] font-bold border border-rose-100 flex items-center animate-in shake-x duration-500">
@@ -125,12 +248,22 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
                   </div>
                 )}
 
+                {step === 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="w-full py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-50 active:scale-[0.98] transition-all"
+                  >
+                    Back
+                  </button>
+                )}
+
                 <button
                   type="submit"
                   disabled={isLoading}
                   className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? <i className="fas fa-circle-notch fa-spin"></i> : <span>Create Account</span>}
+                  {isLoading ? <i className="fas fa-circle-notch fa-spin"></i> : <span>{step === 1 ? 'Next Step' : 'Create Account'}</span>}
                 </button>
 
                 <div className="text-center pt-4">
