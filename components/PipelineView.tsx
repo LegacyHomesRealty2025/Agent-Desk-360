@@ -15,6 +15,7 @@ type StatusFilter = Deal['status'] | 'ALL';
 type SortKey = 'leadName' | 'date' | 'salePrice' | 'side' | 'source';
 type SortDirection = 'asc' | 'desc';
 type ColumnId = 'client' | 'closing' | 'price' | 'side' | 'source' | 'actions';
+type DisplayMode = 'tile' | 'list';
 
 const TZ = 'America/Los_Angeles';
 
@@ -44,11 +45,10 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   const [searchTerm, setSearchTerm] = useState('');
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('list');
   
-  // Drill-down List Features
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  // Reordered: 'closing' moved after 'source'
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(['client', 'price', 'side', 'source', 'closing', 'actions']);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [draggedColIdx, setDraggedColIdx] = useState<number | null>(null);
@@ -82,7 +82,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     email: '',
     address: '',
     salePrice: '', 
-    commissionPercentage: '' as any, // Set to empty string as requested
+    commissionPercentage: '' as any, 
     status: 'ACTIVE' as Deal['status'],
     side: 'BUYER' as Deal['side'],
     date: '',
@@ -293,8 +293,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     const dealId = e.dataTransfer.getData('dealId');
     if (dealId) {
       let updates: Partial<Deal> = { status };
-      
-      // Automatic Date Logic
       if (status === 'PENDING') {
         const future = new Date();
         future.setDate(future.getDate() + 30);
@@ -302,7 +300,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
       } else if (status === 'CLOSED') {
         updates.date = new Date().toISOString();
       }
-      
       onUpdateDeal(dealId, updates);
     }
     setHoveredColumn(null);
@@ -359,12 +356,10 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     return list.sort((a: any, b: any) => {
       let valA = a[sortKey];
       let valB = b[sortKey];
-      
       if (sortKey === 'date') {
         valA = a.date ? new Date(a.date).getTime() : 0;
         valB = b.date ? new Date(b.date).getTime() : 0;
       }
-
       if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
       if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -404,38 +399,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     }
   };
 
-  const renderDealCard = (deal: Deal) => {
-    const lead = leads.find(l => l.id === deal.leadId);
-    const sourceInfo = getSourceIcon(deal.source || lead?.source || '');
-    return (
-      <div 
-        key={deal.id} 
-        draggable
-        onDragStart={(e) => handleDragStart(e, deal.id)}
-        onClick={() => handleOpenEdit(deal)}
-        className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group cursor-grab active:cursor-grabbing relative overflow-hidden ${draggedDealId === deal.id ? 'opacity-30' : ''}`}
-      >
-        <div className="absolute top-3 right-3 flex space-x-1 z-10" onClick={e => e.stopPropagation()}>
-          <button onClick={() => handleOpenEdit(deal)} className="w-6 h-6 bg-slate-900/90 text-white rounded-lg flex items-center justify-center hover:bg-indigo-600 shadow-lg border border-white/20 transition-all"><i className="fas fa-pencil-alt text-[8px]"></i></button>
-          <button onClick={() => setDealToDelete(deal)} className="w-6 h-6 bg-rose-600 text-white rounded-lg flex items-center justify-center hover:bg-rose-700 shadow-lg border border-white/20 transition-all"><i className="fas fa-trash-alt text-[8px]"></i></button>
-        </div>
-
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2 pr-16 overflow-hidden">
-             {sourceInfo && <div className={`w-6 h-6 rounded-lg flex items-center justify-center bg-slate-50 border border-slate-100 shrink-0 ${sourceInfo.color}`}><i className={`${sourceInfo.icon} text-[10px]`}></i></div>}
-             <p className="text-[12px] font-bold text-slate-800 truncate"><Highlight text={deal.leadName} query={searchTerm} /></p>
-          </div>
-        </div>
-        <p className="text-[12px] text-slate-500 mb-3 flex items-center"><i className="fas fa-location-dot mr-1 text-slate-300"></i><span className="truncate"><Highlight text={deal.address} query={searchTerm} /></span></p>
-        <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3 mt-3">
-          <div><p className="text-[10px] text-slate-400 uppercase">Sale Price</p><p className="text-[12px] font-black text-slate-800">${deal.salePrice.toLocaleString()}</p></div>
-          <div><p className="text-[10px] text-slate-400 uppercase">Comm. ({deal.commissionPercentage}%)</p><p className="text-[12px] font-black text-emerald-600">${deal.commissionAmount.toLocaleString()}</p></div>
-        </div>
-        {deal.date && <div className="mt-2 pt-2 border-t border-slate-50 flex items-center text-[10px] text-slate-400 font-bold uppercase tracking-tighter"><i className="far fa-calendar-check mr-1.5 text-indigo-400"></i>{deal.status === 'CLOSED' ? 'Sold' : 'Est. Closing'}: {new Date(deal.date).toLocaleDateString()}</div>}
-      </div>
-    );
-  };
-
   const getSourceIcon = (source: string) => {
     const s = (source || '').toLowerCase();
     if (s.includes('zillow')) return { icon: 'fas fa-house-chimney', color: 'text-[#006AFF]' };
@@ -451,7 +414,64 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     return { icon: 'fas fa-globe', color: 'text-slate-400' };
   };
 
-  // Lightened placeholder color for a faded effect
+  /** 
+   * HIGH FIDELITY DEAL TILE 
+   * Updated to precisely match the user-provided screenshot.
+   */
+  const renderDealTile = (deal: Deal, isSummary: boolean) => {
+    const lead = leads.find(l => l.id === deal.leadId);
+    const sourceInfo = getSourceIcon(deal.source || lead?.source || '');
+    
+    return (
+      <div 
+        key={deal.id} 
+        draggable={isSummary}
+        onDragStart={isSummary ? (e) => handleDragStart(e, deal.id) : undefined}
+        onClick={() => handleOpenEdit(deal)}
+        className={`bg-white border transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden shadow-sm ${
+          isSummary ? 'rounded-2xl p-4 cursor-grab active:cursor-grabbing mb-4 border-indigo-100 shadow-indigo-100/30' : 'rounded-[2rem] p-6 border-indigo-200 shadow-indigo-200/20'
+        } ${draggedDealId === deal.id ? 'opacity-30' : 'hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/10'}`}
+      >
+        <div className={`flex items-start justify-between ${isSummary ? 'mb-2' : 'mb-3'}`}>
+           <div className="flex items-center space-x-3 overflow-hidden">
+              <div className={`shrink-0 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm border border-indigo-100/50 ${isSummary ? 'w-8 h-8 text-[12px]' : 'w-10 h-10 text-[14px]'}`}>
+                <i className={`${sourceInfo.icon}`}></i>
+              </div>
+              <div className="overflow-hidden">
+                <p className={`font-black text-slate-800 leading-none truncate ${isSummary ? 'text-sm' : 'text-base'}`}><Highlight text={deal.leadName} query={searchTerm} /></p>
+                <div className="flex items-center space-x-2 mt-1.5 text-slate-400">
+                   <i className={`fas fa-location-dot ${isSummary ? 'text-[9px]' : 'text-[10px]'}`}></i>
+                   <p className={`font-semibold truncate ${isSummary ? 'text-[10px]' : 'text-[11px]'}`}><Highlight text={deal.address} query={searchTerm} /></p>
+                </div>
+              </div>
+           </div>
+           <div className="flex items-center space-x-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+              <button onClick={() => handleOpenEdit(deal)} className="w-8 h-8 bg-slate-800 text-white rounded-lg flex items-center justify-center hover:bg-indigo-600 transition-all shadow-lg"><i className="fas fa-pencil text-[10px]"></i></button>
+              <button onClick={() => setDealToDelete(deal)} className="w-8 h-8 bg-rose-500 text-white rounded-lg flex items-center justify-center hover:bg-rose-700 transition-all shadow-lg"><i className="fas fa-trash-alt text-[10px]"></i></button>
+           </div>
+        </div>
+
+        <div className={`grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 ${isSummary ? 'mb-4' : 'mb-5'}`}>
+           <div className="space-y-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sale Price</p>
+              <p className={`font-black text-slate-900 leading-none ${isSummary ? 'text-base' : 'text-lg'}`}>${deal.salePrice.toLocaleString()}</p>
+           </div>
+           <div className="space-y-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Comm. ({deal.commissionPercentage}%)</p>
+              <p className={`font-black text-emerald-600 leading-none ${isSummary ? 'text-base' : 'text-lg'}`}>${deal.commissionAmount.toLocaleString()}</p>
+           </div>
+        </div>
+
+        <div className="flex items-center text-indigo-400 font-black uppercase tracking-widest leading-none">
+           <i className={`far fa-calendar-check mr-2 ${isSummary ? 'text-[10px]' : 'text-[12px]'}`}></i>
+           <span className={`${isSummary ? 'text-[8px]' : 'text-[9px]'}`}>
+             Est. Closing: {deal.date ? new Date(deal.date).toLocaleDateString() : 'N/A'}
+           </span>
+        </div>
+      </div>
+    );
+  };
+
   const inputClass = "w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm text-slate-800 placeholder:text-slate-200 placeholder:font-medium";
 
   const scrollToSection = (id: string) => {
@@ -500,7 +520,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                  {isYearDropdownOpen && (
                    <>
                      <div className="fixed inset-0 z-40" onClick={() => setIsYearDropdownOpen(false)}></div>
-                     <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-3 animate-in fade-in slide-in-from-top-2">
+                     <div className={`absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-3 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden`}>
                        {previousYears.map(year => (
                          <button key={year} onClick={() => { setYearFilter(year); setIsYearDropdownOpen(false); setStatusFilter('ALL'); }} className={`w-full text-left px-6 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 ${yearFilter === year ? 'text-indigo-600' : 'text-slate-600'}`}>{year} Production</button>
                        ))}
@@ -532,18 +552,16 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
         </div>
       </div>
 
-      {/* Main View Controller */}
       {statusFilter === 'ALL' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {(['ACTIVE', 'PENDING', 'CLOSED'] as Deal['status'][]).map(status => {
-            const statusDeals = getFilteredStatusDeals(status);
+            const statusDeals = getFilteredStatusDeals(status).slice(0, 20); 
             const grouped = groupDealsByMonth(statusDeals);
             const sortedMonths = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
             return (
               <div key={status} onDragOver={(e) => handleDragOver(e, status)} onDrop={(e) => handleDrop(e, status)} className={`flex flex-col bg-white rounded-[2rem] border-2 transition-all min-h-[400px] overflow-hidden ${hoveredColumn === status ? 'border-indigo-500 bg-indigo-50/10 scale-[1.01]' : 'border-slate-100 shadow-sm'}`}>
-                {/* CLICKABLE TAB: TRANSITIONS TO FULL PAGE */}
                 <button 
-                  onClick={() => setStatusFilter(status)}
+                  onClick={() => { setStatusFilter(status); setCurrentPage(1); }}
                   className={`w-full p-6 flex items-center justify-between text-white shadow-xl transition-all hover:brightness-110 hover:scale-[1.01] active:scale-95 group/header ${getStatusSummaryStyles(status)}`}
                 >
                   <div className="flex items-center space-x-4">
@@ -553,8 +571,8 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                        <div className="flex flex-col mt-3">
                           <p className="text-[11px] font-bold uppercase tracking-widest">{statusDeals.length} Items</p>
                           <p className="text-[11px] font-black uppercase tracking-[0.35em] opacity-100 flex items-center mt-3 filter drop-shadow-sm">
-                            <span className="antialiased">Click for full page</span>
-                            <i className="fas fa-arrow-up-right-from-square ml-3 shadow-sm"></i>
+                            <span className="antialiased text-[10px]">Click for full page</span>
+                            <i className="fas fa-arrow-up-right-from-square ml-3 shadow-sm text-[9px]"></i>
                           </p>
                        </div>
                     </div>
@@ -563,11 +581,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                     <p className="text-lg font-black">${statusDeals.reduce((s,d)=>s+d.salePrice,0).toLocaleString()}</p>
                   </div>
                 </button>
-                <div className="flex-1 px-5 py-6 space-y-6 overflow-y-auto scrollbar-hide max-h-[500px]">
+                <div className="flex-1 px-5 py-6 space-y-6 overflow-y-auto scrollbar-hide max-h-[750px]">
                   {sortedMonths.length > 0 ? sortedMonths.map(month => (
                     <div key={month} className="space-y-3">
                       <div className="flex items-center space-x-3"><div className="h-px flex-1 bg-slate-100"></div><span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{month}</span><div className="h-px flex-1 bg-slate-100"></div></div>
-                      <div className="space-y-4">{grouped[month].map(deal => renderDealCard(deal))}</div>
+                      <div className="space-y-1">{grouped[month].map(deal => renderDealTile(deal, true))}</div>
                     </div>
                   )) : (
                     <div className="flex flex-col items-center justify-center py-24 opacity-20 grayscale">
@@ -581,7 +599,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
           })}
         </div>
       ) : (
-        /* FULL PAGE STATUS VIEW (LIST ONLY) */
         <div className="space-y-8 animate-in fade-in zoom-in-95">
           <div className="flex items-center justify-between bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
              <div className="flex items-center space-x-6">
@@ -596,15 +613,23 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                   <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Full operational dashboard</p>
                 </div>
              </div>
-             <div className="flex items-center space-x-8">
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
-                  <p className="text-2xl font-black text-slate-900 tracking-tighter">${totalFilteredVolume.toLocaleString()}</p>
+             <div className="flex items-center space-x-6">
+                <div className="hidden sm:flex items-center space-x-8 mr-4">
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</p>
+                    <p className="text-2xl font-black text-slate-900 tracking-tighter">${totalFilteredVolume.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total GCI</p>
+                    <p className="text-2xl font-black text-emerald-600 tracking-tighter">${totalFilteredGCI.toLocaleString()}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Total GCI</p>
-                  <p className="text-2xl font-black text-emerald-600 tracking-tighter">${totalFilteredGCI.toLocaleString()}</p>
+
+                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
+                  <button onClick={() => setDisplayMode('tile')} className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${displayMode === 'tile' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="Tile View"><i className="fas fa-th-large"></i></button>
+                  <button onClick={() => setDisplayMode('list')} className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all ${displayMode === 'list' ? 'bg-white shadow-md text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`} title="List View"><i className="fas fa-list-ul"></i></button>
                 </div>
+
                 <button 
                   onClick={() => setIsSettingsOpen(true)}
                   className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
@@ -614,71 +639,85 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
              </div>
           </div>
 
-          <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden overflow-x-auto transition-all">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  {columnOrder.map((col, idx) => (
-                    <th 
-                      key={col} 
-                      draggable 
-                      onDragStart={() => handleColDragStart(idx)} 
-                      onDragOver={e => e.preventDefault()} 
-                      onDrop={() => handleColDrop(idx)}
-                      onClick={() => col !== 'actions' && handleHeaderSort(col === 'client' ? 'leadName' : col === 'price' ? 'salePrice' : col as any)}
-                      className={`px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest transition-all cursor-pointer hover:bg-slate-100 group ${col === 'actions' ? 'text-right' : ''}`}
-                    >
-                      <div className={`flex items-center ${col === 'actions' ? 'justify-end' : ''}`}>
-                         {col !== 'actions' && <i className="fas fa-grip-vertical mr-3 opacity-20 group-hover:opacity-100 transition-opacity"></i>}
-                         {col === 'client' ? 'Client' : col === 'closing' ? 'Closing' : col === 'price' ? 'Price' : col === 'side' ? 'Side' : col === 'source' ? 'Source' : 'Actions'}
-                         {sortKey === (col === 'client' ? 'leadName' : col === 'price' ? 'salePrice' : col) && (
-                           <i className={`fas fa-sort-amount-${sortDirection === 'asc' ? 'up' : 'down'} ml-2 text-indigo-50`}></i>
-                         )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedDeals.map(deal => (
-                  <tr key={deal.id} className="hover:bg-indigo-50/20 transition-all cursor-pointer group" onClick={() => handleOpenEdit(deal)}>
-                    {columnOrder.map(col => (
-                      <td key={col} className={`px-10 py-8 ${col === 'actions' ? 'text-right' : ''}`}>
-                        {col === 'client' && (
-                          <div>
-                            <p className="text-base font-black text-slate-800">{deal.leadName}</p>
-                            <p className="text-[11px] text-slate-400 font-bold truncate max-w-xs">{deal.address}</p>
-                          </div>
-                        )}
-                        {col === 'closing' && <span className="font-black text-slate-600 text-[11px] uppercase tracking-tighter">{deal.date ? new Date(deal.date).toLocaleDateString() : 'N/A'}</span>}
-                        {col === 'price' && (
-                          <div>
-                            <p className="text-base font-black text-slate-900">${deal.salePrice.toLocaleString()}</p>
-                            <p className="text-[10px] text-emerald-600 font-black uppercase">GCI: ${deal.commissionAmount.toLocaleString()}</p>
-                          </div>
-                        )}
-                        {col === 'side' && <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">{deal.side}</span>}
-                        {col === 'source' && (
-                          <div className="flex items-center space-x-3">
-                            <i className={`${getSourceIcon(deal.source || '').icon} ${getSourceIcon(deal.source || '').color} text-sm`}></i>
-                            <span className="text-[10px] font-black text-slate-600 uppercase">{deal.source}</span>
-                          </div>
-                        )}
-                        {col === 'actions' && (
-                          <div className="flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
-                            <button onClick={()=> handleOpenEdit(deal)} className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-[10px]"></i></button>
-                            <button onClick={()=>setDealToDelete(deal)} className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
-                          </div>
-                        )}
-                      </td>
+          {displayMode === 'list' ? (
+            <div className="bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden overflow-x-auto transition-all">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    {columnOrder.map((col, idx) => (
+                      <th 
+                        key={col} 
+                        draggable 
+                        onDragStart={() => handleColDragStart(idx)} 
+                        onDragOver={e => e.preventDefault()} 
+                        onDrop={() => handleColDrop(idx)}
+                        onClick={() => col !== 'actions' && handleHeaderSort(col === 'client' ? 'leadName' : col === 'price' ? 'salePrice' : col as any)}
+                        className={`px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest transition-all cursor-pointer hover:bg-slate-100 group ${col === 'actions' ? 'text-right' : ''}`}
+                      >
+                        <div className={`flex items-center ${col === 'actions' ? 'justify-end' : ''}`}>
+                          {col !== 'actions' && <i className="fas fa-grip-vertical mr-3 opacity-20 group-hover:opacity-100 transition-opacity"></i>}
+                          {col === 'client' ? 'Client' : col === 'closing' ? 'Closing' : col === 'price' ? 'Price' : col === 'side' ? 'Side' : col === 'source' ? 'Source' : 'Actions'}
+                          {sortKey === (col === 'client' ? 'leadName' : col === 'price' ? 'salePrice' : col) && (
+                            <i className={`fas fa-sort-amount-${sortDirection === 'asc' ? 'up' : 'down'} ml-2 text-indigo-500`}></i>
+                          )}
+                        </div>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedDeals.map(deal => (
+                    <tr key={deal.id} className="hover:bg-indigo-50/20 transition-all cursor-pointer group" onClick={() => handleOpenEdit(deal)}>
+                      {columnOrder.map(col => (
+                        <td key={col} className={`px-10 py-8 ${col === 'actions' ? 'text-right' : ''}`}>
+                          {col === 'client' && (
+                            <div>
+                              <p className="text-base font-black text-slate-800">{deal.leadName}</p>
+                              <p className="text-[11px] text-slate-400 font-bold truncate max-w-xs">{deal.address}</p>
+                            </div>
+                          )}
+                          {col === 'closing' && <span className="font-black text-slate-600 text-[11px] uppercase tracking-tighter">{deal.date ? new Date(deal.date).toLocaleDateString() : 'N/A'}</span>}
+                          {col === 'price' && (
+                            <div>
+                              <p className="text-base font-black text-slate-900">${deal.salePrice.toLocaleString()}</p>
+                              <p className="text-[10px] text-emerald-600 font-black uppercase">GCI: ${deal.commissionAmount.toLocaleString()}</p>
+                            </div>
+                          )}
+                          {col === 'side' && <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">{deal.side}</span>}
+                          {col === 'source' && (
+                            <div className="flex items-center space-x-3">
+                              <i className={`${getSourceIcon(deal.source || '').icon} ${getSourceIcon(deal.source || '').color} text-sm`}></i>
+                              <span className="text-[10px] font-black text-slate-600 uppercase">{deal.source}</span>
+                            </div>
+                          )}
+                          {col === 'actions' && (
+                            <div className="flex items-center justify-end space-x-2" onClick={e => e.stopPropagation()}>
+                              <button onClick={()=> handleOpenEdit(deal)} className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><i className="fas fa-pencil-alt text-[10px]"></i></button>
+                              <button onClick={()=>setDealToDelete(deal)} className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm"><i className="fas fa-trash-alt text-[10px]"></i></button>
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+               {paginatedDeals.map(deal => renderDealTile(deal, false))}
+               {paginatedDeals.length === 0 && (
+                 <div className="col-span-full py-48 bg-white rounded-[3rem] border-4 border-dashed border-slate-100 text-center flex flex-col items-center justify-center opacity-40">
+                   <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center text-4xl text-slate-200 shadow-inner mb-6">
+                      <i className="fas fa-file-invoice-dollar"></i>
+                   </div>
+                   <p className="text-xl font-black uppercase tracking-[0.4em] text-slate-400">No transactions found</p>
+                 </div>
+               )}
+            </div>
+          )}
 
-          {/* LIST VIEW PAGINATION FOOTER */}
+          {/* PAGINATION FOOTER */}
           <div className="flex flex-col md:flex-row items-center justify-between border rounded-[2rem] p-8 shadow-sm gap-8 mt-6 bg-white">
             <div className="flex items-center space-x-4 border rounded-xl px-6 py-3 bg-slate-50 border-slate-200">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Show:</span>
@@ -705,7 +744,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                 <button 
                   disabled={currentPage >= totalPages} 
                   onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} 
-                  className="w-12 h-12 flex items-center justify-center rounded-xl border disabled:opacity-30 shadow-sm transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all"
                 >
                   <i className="fas fa-chevron-right"></i>
                 </button>
@@ -895,7 +934,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
               </form>
             </div>
 
-            {/* UNIFORM FIXED FOOTER */}
             <div className="px-10 py-8 border-t border-slate-200 bg-white shrink-0 flex items-center justify-between">
               <div className="flex items-center space-x-12">
                  <div className="text-left"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Projected GCI</p><p className="text-2xl font-black text-emerald-600">${( (parseFloat(unformatCurrency(formData.salePrice)) || 0) * (parseFloat(formData.commissionPercentage) || 0) / 100 ).toLocaleString()}</p></div>
@@ -909,7 +947,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
         </div>
       )}
 
-      {/* Settings Modal for Columns */}
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsSettingsOpen(false)}></div>
@@ -939,7 +976,6 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
         </div>
       )}
 
-      {/* Delete Confirmation */}
       {dealToDelete && (
         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 text-center animate-in zoom-in-95 duration-200">

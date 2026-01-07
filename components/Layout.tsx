@@ -93,6 +93,12 @@ const Layout: React.FC<LayoutProps> = ({
     }
   };
 
+  const getPageTitle = (view: string) => {
+    if (view === 'lead-detail') return 'Contact Details';
+    if (view === 'documents') return 'Training';
+    return view.replace('-', ' ');
+  };
+
   return (
     <div className={`flex h-screen overflow-hidden text-[12px] selection:bg-indigo-500 selection:text-white ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* Premium Sidebar */}
@@ -110,7 +116,7 @@ const Layout: React.FC<LayoutProps> = ({
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-500">
                 <h2 className="text-[15px] font-black tracking-tighter whitespace-nowrap">
-                  Agent Desk <span className="text-indigo-500">360</span>
+                  Agent Desk <span className="text-blue-500">360</span>
                 </h2>
               </div>
             )}
@@ -200,7 +206,7 @@ const Layout: React.FC<LayoutProps> = ({
                     <div className="max-h-64 overflow-y-auto scrollbar-hide px-2 space-y-1">
                       {users.map(agent => (
                         <button 
-                          key={agent.id}
+                          key={agent.id} 
                           onClick={() => { onSwitchUser(agent.id); setIsAgentSwitcherOpen(false); }}
                           className={`w-full text-left p-3 rounded-xl hover:bg-white/5 flex items-center space-x-4 transition-all ${user.id === agent.id ? 'bg-indigo-500/10 ring-1 ring-indigo-500/20' : ''}`}
                         >
@@ -245,10 +251,10 @@ const Layout: React.FC<LayoutProps> = ({
                  onClick={() => setView('dashboard')}
                  className={`text-3xl font-black capitalize tracking-tighter cursor-pointer hover:text-indigo-600 transition-colors leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
                >
-                 {currentView === 'lead-detail' ? 'Contact Details' : currentView.replace('-', ' ')}
+                 {getPageTitle(currentView)}
                </h1>
                <div className="flex items-center space-x-3 mt-1.5">
-                 <span className="text-[10px] font-bold text-slate-400 tracking-[0.15em]">Agent Desk <span className="text-indigo-500">360</span></span>
+                 <span className="text-[10px] font-bold text-slate-400 tracking-[0.15em]">Agent Desk <span className="text-blue-500 font-black">360</span></span>
                  <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                  <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{brokerage.name}</span>
                </div>
@@ -283,6 +289,7 @@ const Layout: React.FC<LayoutProps> = ({
               </button>
 
               <div className="relative" ref={notificationRef}>
+                {/* Fix: Added missing quotes around ternary string result for ring classes to fix Cannot find name 'ring' error */}
                 <button 
                   onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                   className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all active:scale-95 relative ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-white border-slate-200 text-slate-600'} ${isNotificationOpen ? 'ring-4 ring-indigo-500/20 border-indigo-500' : ''}`}
@@ -339,6 +346,7 @@ const Layout: React.FC<LayoutProps> = ({
               </div>
 
               <div className="relative" ref={profileDropdownRef}>
+                {/* Fix: Added missing quotes around ternary string result for ring classes to fix Cannot find name 'ring' error */}
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className={`flex items-center space-x-4 p-2 pr-6 rounded-2xl border transition-all active:scale-95 shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'} ${isProfileDropdownOpen ? 'ring-4 ring-indigo-500/20 border-indigo-500' : ''}`}

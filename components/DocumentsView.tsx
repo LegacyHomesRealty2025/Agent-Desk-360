@@ -272,13 +272,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                  className={`w-full flex items-center px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden ${
                    !selectedFolderId 
                      ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/50' 
-                     : 'text-slate-50 hover:bg-slate-50 dark:hover:bg-white/5'
+                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5'
                  }`}
                >
                   <i className={`fas fa-layer-group w-8 text-[18px] ${!selectedFolderId ? 'text-white' : 'text-indigo-400'}`}></i>
                   <div className="flex-1 flex items-center justify-between">
                     <span className="text-left font-black text-[12.5px] tracking-tight">All Training Assets</span>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${!selectedFolderId ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>{getDocCount(null)}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${!selectedFolderId ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>{getDocCount(null)}</span>
                   </div>
                </button>
 
@@ -293,7 +293,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       className={`w-full flex items-center px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden ${
                         isSelected 
                           ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/50' 
-                          : 'text-slate-50 hover:bg-slate-50 dark:hover:bg-white/5'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5'
                       }`}
                     >
                         <i className={`fas ${folder.icon} w-8 text-[18px] ${isSelected ? 'text-white' : 'text-indigo-400'}`}></i>
@@ -304,7 +304,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               <span className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-indigo-100' : 'text-indigo-400'}`}>Private: {agents.find(a => a.id === folder.sharedWithAgentId)?.firstName}</span>
                             )}
                           </div>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'}`}>{count}</span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>{count}</span>
                         </div>
                     </button>
                     {isAdmin && (
@@ -321,7 +321,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             </nav>
           </div>
 
-          {/* Shrunk Information Box */}
+          {/* Information Box */}
           <div className="bg-slate-900 p-6 rounded-3xl text-white space-y-3 relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
             <div className="relative z-10 flex items-center space-x-4">

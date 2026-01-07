@@ -145,7 +145,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <div className={`border rounded-[2.5rem] p-6 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+          <div className={`border rounded-[2.5rem] p-5 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
             <div className="flex flex-col space-y-1.5 overflow-y-auto max-h-[600px] scrollbar-hide">
               {navItems.map((item, index) => (
                   <div 
@@ -155,13 +155,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     onDragOver={(e) => handleDragOver(e, index, 'NAV')}
                     onDrop={(e) => handleDrop(e, index, 'NAV')}
                     onDragEnd={clearDrag}
-                    className={`flex items-center justify-between p-4 bg-white border-2 rounded-xl cursor-move group transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'border-transparent hover:border-indigo-400 hover:shadow-md'} ${dragType === 'NAV' && overIdx === index ? 'border-indigo-500 scale-[1.01] shadow-lg' : ''} ${dragType === 'NAV' && draggedIdx === index ? 'opacity-20' : ''}`}
+                    className={`flex items-center justify-between p-3.5 bg-white border-2 rounded-xl cursor-move group transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'border-transparent hover:border-indigo-400 hover:shadow-md'} ${dragType === 'NAV' && overIdx === index ? 'border-indigo-500 scale-[1.01] shadow-lg' : ''} ${dragType === 'NAV' && draggedIdx === index ? 'opacity-20' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
-                        <i className={`fas ${item.icon} text-[11px] text-indigo-400`}></i>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{item.label}</span>
+                        <i className={`fas ${item.icon} text-[13px] text-indigo-400`}></i>
+                        <span className={`text-[13px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{item.label}</span>
                     </div>
-                    <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-all text-[10px]"></i>
+                    <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-all text-[11px]"></i>
                   </div>
               ))}
             </div>
@@ -188,7 +188,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
           
-          <div className={`border rounded-[2.5rem] p-6 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+          <div className={`border rounded-[2.5rem] p-5 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
             <form onSubmit={handleAddSource} className="flex space-x-2">
               <input 
                 type="text" 
@@ -210,16 +210,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     onDragOver={(e) => handleDragOver(e, index, 'SOURCE')}
                     onDrop={(e) => handleDrop(e, index, 'SOURCE')}
                     onDragEnd={clearDrag}
-                    className={`flex items-center justify-between p-4 group transition-all cursor-move relative ${
+                    className={`flex items-center justify-between p-3.5 group transition-all cursor-move relative ${
                       dragType === 'SOURCE' && draggedIdx === index ? 'opacity-30' : isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'
                     } ${dragType === 'SOURCE' && overIdx === index ? 'bg-blue-50/50' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
-                      <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-opacity text-[10px]"></i>
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{source}</span>
+                      <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-opacity text-[11px]"></i>
+                      <span className={`text-[13px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{source}</span>
                     </div>
                     <button onClick={() => setConfirmDelete({ type: 'SOURCE', name: source })} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100">
-                      <i className="fas fa-trash-alt text-[10px]"></i>
+                      <i className="fas fa-trash-alt text-[11px]"></i>
                     </button>
                   </div>
                 ))}
@@ -240,7 +240,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <div className={`border rounded-[2.5rem] p-6 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+          <div className={`border rounded-[2.5rem] p-5 shadow-sm space-y-4 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
             <form onSubmit={handleAddTag} className="flex space-x-2">
               <input 
                 type="text" 
@@ -262,19 +262,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     onDragOver={(e) => handleDragOver(e, index, 'TAG')}
                     onDrop={(e) => handleDrop(e, index, 'TAG')}
                     onDragEnd={clearDrag}
-                    className={`flex items-center justify-between p-4 group transition-all cursor-move relative ${
+                    className={`flex items-center justify-between p-3.5 group transition-all cursor-move relative ${
                       dragType === 'TAG' && draggedIdx === index ? 'opacity-30' : isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'
                     } ${dragType === 'TAG' && overIdx === index ? 'bg-emerald-50/50' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
-                      <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-opacity text-[10px]"></i>
+                      <i className="fas fa-grip-vertical text-slate-300 opacity-20 group-hover:opacity-100 transition-opacity text-[11px]"></i>
                       <div className="flex items-center space-x-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tag}</span>
+                        <span className={`text-[13px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{tag}</span>
                       </div>
                     </div>
                     <button onClick={() => setConfirmDelete({ type: 'TAG', name: tag })} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-all opacity-0 group-hover:opacity-100">
-                      <i className="fas fa-trash-alt text-[10px]"></i>
+                      <i className="fas fa-trash-alt text-[11px]"></i>
                     </button>
                   </div>
                 ))}

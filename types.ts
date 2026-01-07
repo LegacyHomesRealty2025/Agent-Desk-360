@@ -75,6 +75,7 @@ export interface Lead {
   spousePhone?: string;
   spouseDob?: string;
   secondaryContactRelationship?: 'Spouse' | 'Sister' | 'Brother' | 'Friend' | 'Partner' | 'Other';
+  familyNotes?: string;
   isDeleted?: boolean;
   deletedAt?: string;
   openHouseId?: string;

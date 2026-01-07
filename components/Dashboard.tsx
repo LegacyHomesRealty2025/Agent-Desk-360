@@ -656,79 +656,81 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Agent Ranking Section - Updated to Vertical List View - Resized 60% smaller width as requested */}
-      <div className="flex justify-start">
-        <div className={`w-full max-w-2xl p-6 rounded-[2.5rem] border shadow-sm flex flex-col ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-           <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-black tracking-tight">Agent Leaderboard</h3>
-              <span className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-50 px-2 py-1 rounded-lg">Top Performers</span>
-           </div>
+      {/* Agent Ranking Section - Only visible to Brokers */}
+      {user.role === UserRole.BROKER && (
+        <div className="flex justify-start">
+          <div className={`w-full max-w-2xl p-6 rounded-[2.5rem] border shadow-sm flex flex-col ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-black tracking-tight">Agent Leaderboard</h3>
+                <span className="text-[8px] font-black text-indigo-500 uppercase tracking-[0.2em] bg-indigo-50 px-2 py-1 rounded-lg">Top Performers</span>
+            </div>
 
-           <div className="flex flex-col gap-3">
-              {agents.map(agent => {
-                 const agentClosedDeals = deals.filter(d => 
-                   d.assignedUserId === agent.id && 
-                   d.status === 'CLOSED' && 
-                   getLAPart(d.date, 'year') === currentYear
-                 );
-                 const volume = agentClosedDeals.reduce((sum, d) => sum + d.salePrice, 0);
-                 const units = agentClosedDeals.length;
-                 return { ...agent, volume, units };
-              }).sort((a, b) => b.volume - a.volume).map((agent, index) => {
-                const isTop3 = index < 3;
-                const rankColor = index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-slate-300' : index === 2 ? 'bg-orange-400' : 'bg-slate-100';
-                const rankIcon = index === 0 ? 'fa-crown' : index === 1 ? 'fa-medal' : index === 2 ? 'fa-award' : '';
-                const maxAgentVolume = agents.reduce((max, a) => {
-                  const vol = deals.filter(d => d.assignedUserId === a.id && d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear).reduce((s, d) => s + d.salePrice, 0);
-                  return Math.max(max, vol);
-                }, 1);
-                
-                return (
-                  <div 
-                    key={agent.id} 
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${isDarkMode ? 'bg-slate-800/50 border-slate-800 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-md'}`}
-                    onClick={() => { onSetViewingAgentId(agent.id); }}
-                  >
-                    <div className="flex items-center space-x-4 flex-1 overflow-hidden">
-                      <div className="relative shrink-0">
-                        <img src={agent.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 shadow-md" alt="" />
-                        <div className={`absolute -top-1.5 -left-1.5 w-5 h-5 rounded-lg flex items-center justify-center text-[8px] text-white font-black shadow-lg ${rankColor}`}>
-                          {isTop3 ? <i className={`fas ${rankIcon}`}></i> : index + 1}
+            <div className="flex flex-col gap-3">
+                {agents.map(agent => {
+                  const agentClosedDeals = deals.filter(d => 
+                    d.assignedUserId === agent.id && 
+                    d.status === 'CLOSED' && 
+                    getLAPart(d.date, 'year') === currentYear
+                  );
+                  const volume = agentClosedDeals.reduce((sum, d) => sum + d.salePrice, 0);
+                  const units = agentClosedDeals.length;
+                  return { ...agent, volume, units };
+                }).sort((a, b) => b.volume - a.volume).map((agent, index) => {
+                  const isTop3 = index < 3;
+                  const rankColor = index === 0 ? 'bg-yellow-400' : index === 1 ? 'bg-slate-300' : index === 2 ? 'bg-orange-400' : 'bg-slate-100';
+                  const rankIcon = index === 0 ? 'fa-crown' : index === 1 ? 'fa-medal' : index === 2 ? 'fa-award' : '';
+                  const maxAgentVolume = agents.reduce((max, a) => {
+                    const vol = deals.filter(d => d.assignedUserId === a.id && d.status === 'CLOSED' && getLAPart(d.date, 'year') === currentYear).reduce((s, d) => s + d.salePrice, 0);
+                    return Math.max(max, vol);
+                  }, 1);
+                  
+                  return (
+                    <div 
+                      key={agent.id} 
+                      className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${isDarkMode ? 'bg-slate-800/50 border-slate-800 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-md'}`}
+                      onClick={() => { onSetViewingAgentId(agent.id); }}
+                    >
+                      <div className="flex items-center space-x-4 flex-1 overflow-hidden">
+                        <div className="relative shrink-0">
+                          <img src={agent.avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 shadow-md" alt="" />
+                          <div className={`absolute -top-1.5 -left-1.5 w-5 h-5 rounded-lg flex items-center justify-center text-[8px] text-white font-black shadow-lg ${rankColor}`}>
+                            {isTop3 ? <i className={`fas ${rankIcon}`}></i> : index + 1}
+                          </div>
+                        </div>
+                        <div className="overflow-hidden flex-1 max-w-xs">
+                          <p className="text-sm font-black truncate flex items-center">
+                            {agent.firstName} {agent.lastName}
+                            {index === 0 && <span className="ml-2 text-xs" title="Top Producer">🏆</span>}
+                          </p>
+                          <div className="flex items-center space-x-3 mt-1">
+                              <div className="flex-1 h-1 bg-slate-200 rounded-full min-w-[80px] overflow-hidden">
+                                <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${(agent.volume / maxAgentVolume) * 100}%` }}></div>
+                              </div>
+                              <span className="text-[9px] font-black text-slate-400 uppercase whitespace-nowrap">{agent.units} Units</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="overflow-hidden flex-1 max-w-xs">
-                         <p className="text-sm font-black truncate flex items-center">
-                           {agent.firstName} {agent.lastName}
-                           {index === 0 && <span className="ml-2 text-xs" title="Top Producer">🏆</span>}
-                         </p>
-                         <div className="flex items-center space-x-3 mt-1">
-                            <div className="flex-1 h-1 bg-slate-200 rounded-full min-w-[80px] overflow-hidden">
-                               <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${(agent.volume / maxAgentVolume) * 100}%` }}></div>
-                            </div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase whitespace-nowrap">{agent.units} Units</span>
-                         </div>
+                      <div className="text-right ml-4 shrink-0">
+                        <p className="text-base font-black text-indigo-600">${(agent.volume / 1000000).toFixed(1)}M</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
                       </div>
                     </div>
-                    <div className="text-right ml-4 shrink-0">
-                      <p className="text-base font-black text-indigo-600">${(agent.volume / 1000000).toFixed(1)}M</p>
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Closed</p>
-                    </div>
-                  </div>
-                );
-              })}
-           </div>
+                  );
+                })}
+            </div>
 
-           <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-              <button 
-                onClick={() => onNavigate('reports')}
-                className="px-10 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center justify-center space-x-2 mx-auto active:scale-95"
-              >
-                 <span>View Full Performance Reports</span>
-                 <i className="fas fa-arrow-right text-[10px]"></i>
-              </button>
-           </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                <button 
+                  onClick={() => onNavigate('reports')}
+                  className="px-10 py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-blue-900/20 hover:bg-blue-700 transition-all flex items-center justify-center space-x-2 mx-auto active:scale-95"
+                >
+                  <span>View Full Performance Reports</span>
+                  <i className="fas fa-arrow-right text-[10px]"></i>
+                </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Invitation Modal */}
       {isInviteModalOpen && (

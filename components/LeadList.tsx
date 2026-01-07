@@ -150,7 +150,8 @@ const LeadList: React.FC<LeadListProps> = ({
     spouseEmail: '',
     spousePhone: '',
     spouseDob: '',
-    secondaryContactRelationship: 'Spouse'
+    secondaryContactRelationship: 'Spouse',
+    familyNotes: ''
   };
 
   const [leadFormData, setLeadFormData] = useState<Partial<Lead>>(emptyLead);
@@ -894,7 +895,7 @@ const LeadList: React.FC<LeadListProps> = ({
                </button>
                <button 
                  onClick={handleBulkDelete}
-                 className="h-[52px] px-8 bg-rose-600 text-white border border-rose-600 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2"
+                 className="h-[52px] px-8 bg-rose-600 text-white border border-rose-600 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all flex items-center space-x-2 ml-1"
                >
                  <i className="fas fa-trash-can"></i>
                  <span>Delete</span>
@@ -1055,7 +1056,7 @@ const LeadList: React.FC<LeadListProps> = ({
         <div className={`rounded-[2.5rem] border shadow-sm overflow-hidden overflow-x-auto transition-all ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} ${isFullPage ? 'ring-2 ring-indigo-500/10' : ''}`}>
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className={`border-b ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+              <tr className={`border-b ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                 {columnOrder.map((colId, idx) => (
                   <th key={colId} className={`px-5 py-6 ${colId === 'selection' ? 'w-16 text-center' : ''} ${colId === 'hotness' ? 'w-24' : ''} ${colId === 'stage' ? 'w-28' : ''}`}>
                     {colId === 'selection' ? (
@@ -1117,7 +1118,7 @@ const LeadList: React.FC<LeadListProps> = ({
            <div className="flex items-center space-x-6">
               <button disabled={currentPage === 1} onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); scrollToTop(); }} className={`w-12 h-12 flex items-center justify-center rounded-xl border disabled:opacity-30 shadow-sm transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}><i className="fas fa-chevron-left"></i></button>
               <div className={`text-sm font-black uppercase tracking-[0.2em] px-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Page {currentPage} of {totalPages || 1}</div>
-              <button disabled={currentPage >= totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} className={`w-12 h-12 flex items-center justify-center rounded-xl border disabled:opacity-30 shadow-sm transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}><i className="fas fa-chevron-right"></i></button>
+              <button disabled={currentPage >= totalPages} onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); scrollToTop(); }} className={`w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-slate-50 shadow-sm transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}><i className="fas fa-chevron-right"></i></button>
            </div>
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Showing {paginatedLeads.length} of {filteredAndSortedLeads.length} leads</p>
         </div>
@@ -1245,7 +1246,7 @@ const LeadList: React.FC<LeadListProps> = ({
       {isBulkDeleteModalOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsBulkDeleteModalOpen(false)}></div>
-          <div className={`rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] border w-full max-w-md relative z-10 p-12 text-center animate-in zoom-in-95 duration-200 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className={`rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-md relative z-10 p-12 text-center animate-in zoom-in-95 duration-200 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
              <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center text-5xl mx-auto mb-8 shadow-inner">
                 <i className="fas fa-trash-can"></i>
              </div>
@@ -1432,7 +1433,7 @@ const LeadList: React.FC<LeadListProps> = ({
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-2.5">
                     <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Budget ($)</label>
-                    <input type="text" required value={formatBudget(leadFormData.budget)} onChange={handleBudgetChange} className={`w-full border rounded-[1.5rem] px-8 py-5 text-xl font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200'}`} placeholder="0" />
+                    <input type="text" value={formatBudget(leadFormData.budget)} onChange={handleBudgetChange} className={`w-full border rounded-[1.5rem] px-8 py-5 text-xl font-black focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-slate-200'}`} placeholder="0" />
                   </div>
                 </div>
               </div>
@@ -1440,7 +1441,7 @@ const LeadList: React.FC<LeadListProps> = ({
               {/* SECONDARY CONTACT SECTION */}
               <div className={`p-10 rounded-[2.5rem] border space-y-10 ${isDarkMode ? 'bg-slate-800/40 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                 <div className="flex items-center space-x-4 border-b border-slate-200 dark:border-slate-700 pb-6 mb-4">
-                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-base shadow-md"><i className="fas fa-user-plus"></i></div>
+                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-lg shadow-md"><i className="fas fa-user-plus"></i></div>
                   <h4 className={`text-lg font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>Secondary Contact Details</h4>
                 </div>
 
@@ -1477,6 +1478,17 @@ const LeadList: React.FC<LeadListProps> = ({
                     <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Secondary Birthday</label>
                     <input type="date" value={leadFormData.spouseDob} onChange={e => setLeadFormData({...leadFormData, spouseDob: e.target.value})} className={`w-full border rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`} />
                   </div>
+                </div>
+
+                {/* FAMILY NOTES IN FORM */}
+                <div className="space-y-2.5">
+                  <label className="text-[12px] font-black text-slate-400 uppercase ml-1">Family & Pets Notes</label>
+                  <textarea 
+                    value={leadFormData.familyNotes} 
+                    onChange={e => setLeadFormData({...leadFormData, familyNotes: e.target.value})} 
+                    placeholder="Kids names, pet names, etc."
+                    className={`w-full border rounded-[1.5rem] px-6 py-5 text-lg font-semibold focus:ring-4 focus:ring-indigo-500/10 outline-none shadow-sm min-h-[100px] resize-none ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200'}`} 
+                  />
                 </div>
               </div>
 
