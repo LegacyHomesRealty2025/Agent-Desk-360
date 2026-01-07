@@ -20,6 +20,7 @@ import LoginView from './components/LoginView.tsx';
 import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
 import DocumentsView from './components/DocumentsView.tsx';
+import MarketingView from './components/MarketingView.tsx';
 import { leadIngestionService } from './services/leadIngestionService.ts';
 
 // RESTORE CONTEXT: MOCKED SYSTEM TIME TO 01/06/2026 (Updated as requested)
@@ -78,6 +79,7 @@ const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'leads', label: 'Leads', icon: 'fa-users' },
   { id: 'contacts', label: 'Contacts', icon: 'fa-address-book' },
   { id: 'open-house', label: 'Open House', icon: 'fa-door-open' },
+  { id: 'marketing', label: 'Marketing', icon: 'fa-bullhorn' },
   { id: 'documents', label: 'Training Center', icon: 'fa-graduation-cap' },
   { id: 'pipeline', label: 'Transactions', icon: 'fa-file-invoice-dollar' },
   { id: 'reports', label: 'Reports', icon: 'fa-chart-line' },
@@ -473,6 +475,7 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} onInviteUser={handleInviteAgent} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
       case 'email': return <EmailDashboard emails={accessibleEmails} currentUser={currentUser} onSendEmail={handleSendEmail} onUpdateEmail={handleUpdateEmail} onDeleteEmail={handleDeleteEmail} isDarkMode={isDarkMode} />;
       case 'open-house': return <OpenHouseView openHouses={accessibleOpenHouses} agents={activeUsers} currentUser={currentUser} onCreate={oh => setOpenHouses(prev => [oh, ...prev])} onUpdate={updated => setOpenHouses(prev => prev.map(oh => oh.id === updated.id ? updated : oh))} onDelete={id => setOpenHouses(prev => prev.map(oh => oh.id === id ? { ...oh, isDeleted: true, deletedAt: new Date().toISOString() } : oh))} onPreviewPublic={oh => setActivePublicOpenHouse(oh)} />;
+      case 'marketing': return <MarketingView user={currentUser} isDarkMode={isDarkMode} />;
       case 'documents': return <DocumentsView currentUser={currentUser} agents={activeUsers} brokerage={brokerage} initialFolders={folders} initialDocuments={documents} onUpdateFolders={setFolders} onUpdateDocuments={setDocuments} isDarkMode={isDarkMode} />;
       case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} isDarkMode={isDarkMode} />;
       case 'contacts': return <ContactList leads={accessibleLeads} onSelectLead={l => { setSelectedLeadId(l.id); setView('lead-detail'); }} onUpdateLead={updated => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))} onBulkUpdateLeads={handleBulkUpdateLeads} onAddLeads={newLeads => setLeads(prev => [...prev, ...newLeads])} availableSources={sources} availableTags={tags} onUpdateSources={handleUpdateSources} onUpdateTags={handleUpdateTags} isDarkMode={isDarkMode} />;
