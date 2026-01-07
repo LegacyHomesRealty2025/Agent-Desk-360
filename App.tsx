@@ -203,28 +203,55 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('[Auth] Checking authentication...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('[Auth] Session status:', session ? 'Active' : 'None');
+
+        if (!session) {
+          console.log('[Auth] No session found, showing login');
+          setIsCheckingAuth(false);
+          return;
+        }
+
+        console.log('[Auth] Loading user profile...');
         const user = await authService.getCurrentUser();
+
         if (user) {
+          console.log('[Auth] User profile loaded:', user.email, user.role);
           setCurrentUser(user);
           const brokerageData = await authService.getBrokerage(user.brokerageId);
+          console.log('[Auth] Brokerage loaded:', brokerageData?.name);
           setBrokerage(brokerageData);
           setIsAuthenticated(true);
+        } else {
+          console.log('[Auth] No profile found for session, clearing auth');
+          await supabase.auth.signOut();
+          setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('[Auth] Error during auth check:', error);
+        await supabase.auth.signOut();
+        setIsAuthenticated(false);
       } finally {
+        console.log('[Auth] Auth check complete');
         setIsCheckingAuth(false);
       }
     };
 
     checkAuth();
 
-    const { data: subscription } = authService.onAuthStateChange(async (user) => {
+    const { data: subscription } = authService.onAuthStateChange((user) => {
       if (user) {
-        setCurrentUser(user);
-        const brokerageData = await authService.getBrokerage(user.brokerageId);
-        setBrokerage(brokerageData);
-        setIsAuthenticated(true);
+        (async () => {
+          try {
+            setCurrentUser(user);
+            const brokerageData = await authService.getBrokerage(user.brokerageId);
+            setBrokerage(brokerageData);
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error('Error loading user data:', error);
+          }
+        })();
       } else {
         setCurrentUser(null);
         setBrokerage(null);

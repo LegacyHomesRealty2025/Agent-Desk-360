@@ -90,13 +90,20 @@ export const authService = {
   },
 
   onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        const user = await this.getCurrentUser();
-        callback(user);
-      } else {
-        callback(null);
-      }
+    return supabase.auth.onAuthStateChange((event, session) => {
+      (async () => {
+        try {
+          if (session) {
+            const user = await this.getCurrentUser();
+            callback(user);
+          } else {
+            callback(null);
+          }
+        } catch (error) {
+          console.error('Auth state change error:', error);
+          callback(null);
+        }
+      })();
     });
   },
 };

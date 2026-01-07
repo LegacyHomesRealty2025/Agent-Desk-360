@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auth Debug</title>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const supabase = createClient(
+      'https://hmvjpllvqtnwewgqsgfe.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtdmpwbGx2cXRud2V3Z3FzZ2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NDc5NDIsImV4cCI6MjA4MzMyMzk0Mn0.NN1rE0KS26JmPHr11Q6-iJQ3ghrnoCtSlBsnlW0qM5s'
+    );
+
+    async function checkAuth() {
+      console.log('Checking auth...');
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('Session:', session);
+      console.log('Error:', error);
+
+      if (session) {
+        console.log('User ID:', session.user.id);
+        console.log('Checking for profile...');
+
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        console.log('Profile:', profile);
+        console.log('Profile Error:', profileError);
+      } else {
+        console.log('No active session');
+      }
+
+      document.getElementById('output').innerHTML = `
+        <h2>Auth Status</h2>
+        <p>Session: ${session ? 'Active' : 'None'}</p>
+        ${session ? `<p>User ID: ${session.user.id}</p>` : ''}
+        <button onclick="clearSession()">Clear Session & Reload</button>
+      `;
+    }
+
+    window.clearSession = async function() {
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      location.reload();
+    };
+
+    checkAuth();
+  </script>
+</head>
+<body>
+  <div id="output">Loading...</div>
+</body>
+</html>
