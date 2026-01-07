@@ -58,6 +58,9 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
   
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   const [pendingNote, setPendingNote] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteContent, setEditingNoteContent] = useState('');
+  const [noteToDelete, setNoteToDelete] = useState<DealNote | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -213,6 +216,39 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
     };
     setFormData(prev => ({ ...prev, dealNotes: [newNote, ...prev.dealNotes] }));
     setPendingNote('');
+  };
+
+  const handleEditNote = (note: DealNote) => {
+    setEditingNoteId(note.id);
+    setEditingNoteContent(note.content);
+  };
+
+  const handleSaveNote = () => {
+    if (!editingNoteContent.trim() || !editingNoteId) return;
+    setFormData(prev => ({
+      ...prev,
+      dealNotes: prev.dealNotes.map(note =>
+        note.id === editingNoteId
+          ? { ...note, content: editingNoteContent.trim() }
+          : note
+      )
+    }));
+    setEditingNoteId(null);
+    setEditingNoteContent('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setEditingNoteContent('');
+  };
+
+  const handleDeleteNote = () => {
+    if (!noteToDelete) return;
+    setFormData(prev => ({
+      ...prev,
+      dealNotes: prev.dealNotes.filter(note => note.id !== noteToDelete.id)
+    }));
+    setNoteToDelete(null);
   };
 
   const handleSelectLead = (l: Lead) => {
@@ -923,9 +959,54 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
                       </div>
                       <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
                         {formData.dealNotes.map(note => (
-                          <div key={note.id} className="bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-sm animate-in fade-in">
-                            <span className="text-[10px] font-black text-slate-400 uppercase bg-white px-3 py-1 rounded border border-slate-100">{new Date(note.createdAt).toLocaleString()}</span>
-                            <p className="text-lg font-bold text-slate-700 mt-3">{note.content}</p>
+                          <div key={note.id} className="bg-slate-50 p-6 rounded-xl border border-slate-100 shadow-sm animate-in fade-in group/note">
+                            <div className="flex items-start justify-between mb-3">
+                              <span className="text-[10px] font-black text-slate-400 uppercase bg-white px-3 py-1 rounded border border-slate-100">{new Date(note.createdAt).toLocaleString()}</span>
+                              <div className="flex items-center space-x-2 opacity-0 group-hover/note:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditNote(note)}
+                                  className="w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                >
+                                  <i className="fas fa-pencil text-[10px]"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setNoteToDelete(note)}
+                                  className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                >
+                                  <i className="fas fa-trash-alt text-[10px]"></i>
+                                </button>
+                              </div>
+                            </div>
+                            {editingNoteId === note.id ? (
+                              <div className="space-y-3">
+                                <textarea
+                                  value={editingNoteContent}
+                                  onChange={(e) => setEditingNoteContent(e.target.value)}
+                                  className="w-full bg-white border-2 border-indigo-200 rounded-xl p-4 font-bold text-base outline-none min-h-[100px] focus:border-indigo-400 transition-all"
+                                  autoFocus
+                                />
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    type="button"
+                                    onClick={handleSaveNote}
+                                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700 transition-all"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="px-6 py-2 bg-slate-200 text-slate-600 rounded-lg font-black uppercase text-[10px] tracking-widest hover:bg-slate-300 transition-all"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-lg font-bold text-slate-700">{note.content}</p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -985,6 +1066,23 @@ const PipelineView: React.FC<PipelineViewProps> = ({ deals, leads, onAddDeal, on
             <div className="grid grid-cols-2 gap-4">
               <button onClick={() => setDealToDelete(null)} className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-[10px]">Cancel</button>
               <button onClick={executeDeleteDeal} className="py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-rose-100">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {noteToDelete && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-md p-10 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner border border-rose-100"><i className="fas fa-sticky-note"></i></div>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">Delete Note?</h3>
+            <p className="text-slate-500 mb-4 font-medium leading-relaxed">This note will be permanently removed from this transaction.</p>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-10 text-left max-h-32 overflow-y-auto">
+              <p className="text-sm font-bold text-slate-700 line-clamp-3">{noteToDelete.content}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setNoteToDelete(null)} className="py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-[10px]">Cancel</button>
+              <button onClick={handleDeleteNote} className="py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-rose-100">Delete Note</button>
             </div>
           </div>
         </div>
