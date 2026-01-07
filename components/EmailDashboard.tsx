@@ -1,27 +1,33 @@
 import React, { useState, useMemo } from 'react';
-import { EmailMessage, User, EmailFolder } from '../types.ts';
+import { EmailMessage, User, EmailFolder, Lead } from '../types.ts';
+import BulkEmailComposer from './BulkEmailComposer.tsx';
+import EmailTemplatesManager from './EmailTemplatesManager.tsx';
 
 interface EmailDashboardProps {
   emails: EmailMessage[];
   currentUser: User;
+  leads: Lead[];
   onSendEmail: (email: EmailMessage) => void;
   onUpdateEmail: (id: string, updates: Partial<EmailMessage>) => void;
   onDeleteEmail: (id: string) => void;
   isDarkMode: boolean;
 }
 
-const EmailDashboard: React.FC<EmailDashboardProps> = ({ 
-  emails, 
-  currentUser, 
-  onSendEmail, 
-  onUpdateEmail, 
-  onDeleteEmail, 
-  isDarkMode 
+const EmailDashboard: React.FC<EmailDashboardProps> = ({
+  emails,
+  currentUser,
+  leads,
+  onSendEmail,
+  onUpdateEmail,
+  onDeleteEmail,
+  isDarkMode
 }) => {
   const [activeFolder, setActiveFolder] = useState<EmailFolder>('INBOX');
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [composeData, setComposeData] = useState({
     to: '',
     subject: '',
@@ -91,13 +97,29 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
     <div className={`h-[calc(100vh-14rem)] flex flex-col md:flex-row bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 ${isDarkMode ? 'bg-slate-900 border-slate-800' : ''}`}>
       
       {/* Sidebar Navigation */}
-      <aside className={`w-full md:w-64 border-r flex flex-col p-6 space-y-8 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-slate-50/30'}`}>
-        <button 
+      <aside className={`w-full md:w-64 border-r flex flex-col p-6 space-y-4 ${isDarkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-slate-50/30'}`}>
+        <button
           onClick={() => setIsComposeOpen(true)}
           className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-95"
         >
           <i className="fas fa-plus"></i>
           <span>Compose</span>
+        </button>
+
+        <button
+          onClick={() => setIsBulkEmailOpen(true)}
+          className={`w-full py-3 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center space-x-3 active:scale-95 ${isDarkMode ? 'bg-slate-800 text-blue-400 hover:bg-slate-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+        >
+          <i className="fas fa-paper-plane"></i>
+          <span>Bulk Send</span>
+        </button>
+
+        <button
+          onClick={() => setIsTemplatesOpen(true)}
+          className={`w-full py-3 rounded-2xl font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center space-x-3 active:scale-95 ${isDarkMode ? 'bg-slate-800 text-green-400 hover:bg-slate-700' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
+        >
+          <i className="fas fa-file-alt"></i>
+          <span>Templates</span>
         </button>
 
         <nav className="space-y-1.5">
@@ -306,6 +328,26 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Bulk Email Modal */}
+      {isBulkEmailOpen && (
+        <BulkEmailComposer
+          leads={leads}
+          onClose={() => setIsBulkEmailOpen(false)}
+          onSuccess={() => {
+            setIsBulkEmailOpen(false);
+          }}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* Email Templates Modal */}
+      {isTemplatesOpen && (
+        <EmailTemplatesManager
+          onClose={() => setIsTemplatesOpen(false)}
+          isDarkMode={isDarkMode}
+        />
       )}
     </div>
   );
