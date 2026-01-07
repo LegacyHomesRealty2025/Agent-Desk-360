@@ -226,7 +226,7 @@ const App: React.FC = () => {
         } else {
           console.log('[Auth] No profile found for session, clearing auth');
           await supabase.auth.signOut();
-          setIsAuthenticated(true);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('[Auth] Error during auth check:', error);
