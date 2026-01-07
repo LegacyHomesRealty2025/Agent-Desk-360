@@ -45,7 +45,17 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
         password: password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.toLowerCase().includes('already registered') ||
+            authError.message.toLowerCase().includes('already exists')) {
+          setError('ACCOUNT_EXISTS');
+        } else {
+          throw authError;
+        }
+        setIsLoading(false);
+        return;
+      }
+
       if (!authData.user) throw new Error('Signup failed');
 
       const brokerageNameToUse = role === 'BROKER'
@@ -226,9 +236,27 @@ const SignupView: React.FC<SignupViewProps> = ({ onSignupSuccess, onNavigateToLo
                 )}
 
                 {error && (
-                  <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-xl text-[11px] font-bold border border-rose-100 flex items-center animate-in shake-x duration-500">
-                    <i className="fas fa-circle-exclamation mr-3"></i>
-                    {error}
+                  <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-xl text-[11px] font-bold border border-rose-100 animate-in shake-x duration-500">
+                    {error === 'ACCOUNT_EXISTS' ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <i className="fas fa-circle-exclamation mr-3"></i>
+                          <span>This email is already registered.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={onNavigateToLogin}
+                          className="w-full py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-xs uppercase tracking-wider"
+                        >
+                          Go to Sign In
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <i className="fas fa-circle-exclamation mr-3"></i>
+                        {error}
+                      </div>
+                    )}
                   </div>
                 )}
 
