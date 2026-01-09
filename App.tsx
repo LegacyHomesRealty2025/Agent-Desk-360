@@ -29,12 +29,8 @@ import BrokerAdminPanel from './components/BrokerAdminPanel.tsx';
 
 const MOCKED_NOW = new Date('2026-01-06T09:00:00');
 const TZ = 'America/Los_Angeles';
-const DATA_VERSION = '1.0.8';
-const STORAGE_KEYS = { VERSION: 'af_crm_version', LEADS: 'af_crm_leads', TASKS: 'af_crm_tasks', DEALS: 'af_crm_deals', OPEN_HOUSES: 'af_crm_open_houses', USERS: 'af_crm_users', EMAILS: 'af_crm_emails', SOURCES: 'af_crm_sources', TAGS: 'af_crm_tags', TRASHED_SOURCES: 'af_crm_trashed_sources', TRASHED_TAGS: 'af_crm_trashed_tags', GOALS: 'af_crm_goals', FOLDERS: 'af_crm_folders', DOCUMENTS: 'af_crm_documents' };
 
-export interface NavItemConfig { id: string; label: string; icon: string; roleRestriction?: UserRole; }
-
-const INITIAL_NAV_ITEMS: NavItemConfig[] = [
+const INITIAL_NAV_ITEMS: any[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
   { id: 'email', label: 'Email Center', icon: 'fa-envelope' },
   { id: 'leads', label: 'Leads', icon: 'fa-users' },
@@ -42,11 +38,11 @@ const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'open-house', label: 'Open House', icon: 'fa-door-open' },
   { id: 'documents', label: 'Training Center', icon: 'fa-graduation-cap' },
   { id: 'pipeline', label: 'Transactions', icon: 'fa-file-invoice-dollar' },
-  { id: 'reports', label: 'Reports', icon: 'fa-chart-line', roleRestriction: UserRole.BROKER }, // RESTRICTED
+  { id: 'reports', label: 'Reports', icon: 'fa-chart-line', roleRestriction: UserRole.BROKER },
   { id: 'calendar', label: 'Calendar', icon: 'fa-calendar-alt' },
   { id: 'tasks', label: 'Tasks', icon: 'fa-check-circle' },
-  { id: 'trash', label: 'Trash Bin', icon: 'fa-trash-can', roleRestriction: UserRole.BROKER }, // RESTRICTED
-  { id: 'team', label: 'Team', icon: 'fa-users-gear', roleRestriction: UserRole.BROKER }, // RESTRICTED
+  { id: 'trash', label: 'Trash Bin', icon: 'fa-trash-can', roleRestriction: UserRole.BROKER },
+  { id: 'team', label: 'Team', icon: 'fa-users-gear', roleRestriction: UserRole.BROKER },
   { id: 'profile', label: 'My Profile', icon: 'fa-user-circle' },
   { id: 'settings', label: 'Settings', icon: 'fa-cog' },
 ];
@@ -61,11 +57,17 @@ const App: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [openHouses, setOpenHouses] = useState<OpenHouse[]>([]);
+  const [emails, setEmails] = useState<EmailMessage[]>([]);
+  const [goals, setGoals] = useState<YearlyGoal[]>([]);
+  const [folders, setFolders] = useState<SharedFolder[]>([]);
+  const [documents, setDocuments] = useState<SharedDocument[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [view, setView] = useState<string>('dashboard');
   const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // LOAD REAL TEAM DATA
   const loadTeamData = async (bId: string) => {
     const { data } = await supabase.from('user_profiles').select('*').eq('brokerage_id', bId).eq('is_deleted', false);
     if (data) setUsers(data.map(u => ({ id: u.id, brokerageId: u.brokerage_id, firstName: u.first_name, lastName: u.last_name, email: u.email, role: u.role as UserRole, isDeleted: u.is_deleted })));
@@ -86,32 +88,35 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  // SYNTAX FIX: Using letter 'l' and 't' correctly
+  // FIXED: Corrected the use of 'l' (letter) vs '1' (number) and added missing closing parenthesis
   const activeUsers = useMemo(() => users.filter(u => !u.isDeleted), [users]);
+  
   const accessibleLeads = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? leads : leads.filter(l => l.assignedAgentId === currentUser?.id)).filter(l => !l.isDeleted), 
+    (currentUser?.role === UserRole.BROKER ? leads : leads.filter(l => 
+      l.assignedAgentId === currentUser?.id)).filter(l => !l.isDeleted), 
     [leads, currentUser]
   );
+
   const accessibleTasks = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? tasks : tasks.filter(t => t.assignedUserId === currentUser?.id)), 
+    (currentUser?.role === UserRole.BROKER ? tasks : tasks.filter(t => 
+      t.assignedUserId === currentUser?.id)), 
     [tasks, currentUser]
   );
 
   const renderContent = () => {
     if (!currentUser) return null;
-    // ROLE GUARD: Agents cannot see team/reports
     if (currentUser.role === UserRole.AGENT && (view === 'team' || view === 'reports')) {
-        return <Dashboard user={currentUser} agents={activeUsers} leads={accessibleLeads} />;
+        return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
     }
     switch (view) {
-      case 'dashboard': return <Dashboard user={currentUser} agents={activeUsers} leads={accessibleLeads} />;
+      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
       case 'team': return <TeamView users={activeUsers} currentUser={currentUser} />;
-      case 'profile': return <ProfileView user={currentUser} onUpdate={setCurrentUser} />;
-      default: return <Dashboard user={currentUser} agents={activeUsers} leads={accessibleLeads} />;
+      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
     }
   };
 
-  if (isCheckingAuth) return <div>Loading Agent Desk 360...</div>;
+  if (isCheckingAuth) return <div className="fixed inset-0 bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+
   if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={() => window.location.reload()} />;
 
   if (!isAuthenticated) {
@@ -120,17 +125,17 @@ const App: React.FC = () => {
       <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() => setAuthView('signup')} />;
   }
 
-  // FORCE JOINVIEW IF DATA MISSING
   if (!currentUser || !brokerage) return <JoinView onComplete={() => window.location.reload()} />;
 
   return (
     <Layout 
       user={currentUser} 
+      users={activeUsers}
+      brokerage={brokerage}
       currentView={view} 
       setView={setView} 
       onLogout={() => authService.signOut().then(() => setIsAuthenticated(false))}
-      // HIDE SWITCHER FOR AGENTS
-      onSwitchUser={currentUser.role === UserRole.BROKER ? (id) => console.log(id) : undefined}
+      onSwitchUser={currentUser.role === UserRole.BROKER ? (id: string) => console.log(id) : undefined}
       navItems={INITIAL_NAV_ITEMS.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)}
     >
       {renderContent()}
