@@ -20,21 +20,63 @@ interface BrokerageData {
   subscription_plan: string;
 }
 
- export const authService = {
-  async signUp(email: string, password: string, role: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { role }
+export const authService = {
+  async signUp(
+    email: string,
+    password: string,
+    profile: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+      licenseNumber: string;
+      avatarUrl: string;
+      role: UserRole;
+      brokerageId: string;
+    }
+  ): Promise<boolean> {
+    try {
+      // 1. Create the Auth Account in Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { role: profile.role } 
+        }
+      });
+
+      if (authError || !authData.user) {
+        console.error('Auth signup error:', authError);
+        throw authError;
       }
-    });
-    if (error) throw error;
-    return data;
+
+      // 2. Create the Database Profile entry
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          brokerage_id: profile.brokerageId,
+          email,
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          role: profile.role,
+          phone: profile.phone,
+          license_number: profile.licenseNumber,
+          avatar_url: profile.avatarUrl,
+          is_deleted: false,
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw profileError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in signUp:', error);
+      throw error;
+    }
   },
 
-  async getCurrentUser(): Promise<User | null> {
-    // ... keep the rest of the file as it was
   async getCurrentUser(): Promise<User | null> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -110,12 +152,10 @@ interface BrokerageData {
       if (updates.licenseNumber !== undefined) updateData.license_number = updates.licenseNumber;
       if (updates.avatar !== undefined) updateData.avatar_url = updates.avatar;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_profiles')
         .update(updateData)
-        .eq('id', userId)
-        .select()
-        .single();
+        .eq('id', userId);
 
       if (error) {
         console.error('Error updating profile:', error);
@@ -129,63 +169,12 @@ interface BrokerageData {
     }
   },
 
-  async signUp(
-    email: string,
-    password: string,
-    profile: {
-      firstName: string;
-      lastName: string;
-      phone: string;
-      licenseNumber: string;
-      avatarUrl: string;
-      role: UserRole;
-      brokerageId: string;
-    }
-  ): Promise<boolean> {
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError || !authData.user) {
-        console.error('Auth signup error:', authError);
-        throw authError || new Error('Failed to create auth user');
-      }
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          brokerage_id: profile.brokerageId,
-          email,
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          role: profile.role,
-          phone: profile.phone,
-          license_number: profile.licenseNumber,
-          avatar_url: profile.avatarUrl,
-          is_deleted: false,
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        throw profileError;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error in signUp:', error);
-      throw error;
-    }
-  },
-
   async signOut(): Promise<void> {
     await supabase.auth.signOut();
   },
 
   onAuthStateChange(callback: (user: User | null) => void) {
-    return supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       (async () => {
         try {
           if (session) {
@@ -200,5 +189,6 @@ interface BrokerageData {
         }
       })();
     });
+    return { subscription };
   },
 };
