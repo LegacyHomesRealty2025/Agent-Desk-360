@@ -28,9 +28,16 @@ import { invitationService, BrokerageInvite } from './services/invitationService
 import BrokerAdminPanel from './components/BrokerAdminPanel.tsx';
 
 const MOCKED_NOW = new Date('2026-01-06T09:00:00');
+const DEFAULT_SOURCES = ['Zillow', 'Realtor.com', 'Friend', 'Broker Referral', 'Open House', 'UpNest.com', 'Website', 'Yard Sign', 'Google', 'Facebook', 'TikTok', 'Instagram', 'LinkedIn', 'Past Client'];
+const DEFAULT_TAGS = ['Buyer', 'Seller', 'Investor', 'Indian', 'Fiji', 'Renter', 'VA Buyer', 'Rashmi', 'Charles', 'Builder'];
 const TZ = 'America/Los_Angeles';
+const DATA_VERSION = '1.0.8';
+const STORAGE_KEYS = { VERSION: 'af_crm_version', LEADS: 'af_crm_leads', TASKS: 'af_crm_tasks', DEALS: 'af_crm_deals', OPEN_HOUSES: 'af_crm_open_houses', USERS: 'af_crm_users', EMAILS: 'af_crm_emails', SOURCES: 'af_crm_sources', TAGS: 'af_crm_tags', TRASHED_SOURCES: 'af_crm_trashed_sources', TRASHED_TAGS: 'af_crm_trashed_tags', GOALS: 'af_crm_goals', FOLDERS: 'af_crm_folders', DOCUMENTS: 'af_crm_documents' };
 
-const INITIAL_NAV_ITEMS: any[] = [
+export interface NavItemConfig { id: string; label: string; icon: string; roleRestriction?: UserRole; }
+export interface NotificationItem { id: string; title: string; description: string; type: 'TASK' | 'EVENT'; view: string; date?: string; }
+
+const INITIAL_NAV_ITEMS: NavItemConfig[] = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
   { id: 'email', label: 'Email Center', icon: 'fa-envelope' },
   { id: 'leads', label: 'Leads', icon: 'fa-users' },
@@ -51,73 +58,121 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [openHouses, setOpenHouses] = useState<OpenHouse[]>([]);
-  const [emails, setEmails] = useState<EmailMessage[]>([]);
-  const [goals, setGoals] = useState<YearlyGoal[]>([]);
-  const [folders, setFolders] = useState<SharedFolder[]>([]);
-  const [documents, setDocuments] = useState<SharedDocument[]>([]);
-  const [sources, setSources] = useState<string[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [showBrokerAdmin, setShowBrokerAdmin] = useState(false);
   const [view, setView] = useState<string>('dashboard');
-  const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [activePublicOpenHouse, setActivePublicOpenHouse] = useState<OpenHouse | null>(null);
+  const [navItems, setNavItems] = useState<NavItemConfig[]>(INITIAL_NAV_ITEMS);
 
-  const loadTeamData = async (bId: string) => {
-    const { data } = await supabase.from('user_profiles').select('*').eq('brokerage_id', bId).eq('is_deleted', false);
-    if (data) setUsers(data.map(u => ({ id: u.id, brokerageId: u.brokerage_id, firstName: u.first_name, lastName: u.last_name, email: u.email, role: u.role as UserRole, isDeleted: u.is_deleted })));
+  // CHANGED: Initialize users from real database instead of MOCK_AGENTS only
+  const [users, setUsers] = useState<User[]>([]);
+
+  // ... (Your existing state initializers for leads, tasks, deals, etc. remain here)
+  const [leads, setLeads] = useState<Lead[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.LEADS); return saved ? JSON.parse(saved) : MOCK_LEADS; });
+  const [tasks, setTasks] = useState<Task[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.TASKS); return saved ? JSON.parse(saved) : MOCK_TASKS; });
+  const [deals, setDeals] = useState<Deal[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.DEALS); return saved ? JSON.parse(saved) : MOCK_DEALS; });
+  const [openHouses, setOpenHouses] = useState<OpenHouse[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.OPEN_HOUSES); return saved ? JSON.parse(saved) : MOCK_OPEN_HOUSES; });
+  const [emails, setEmails] = useState<EmailMessage[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.EMAILS); return saved ? JSON.parse(saved) : MOCK_EMAILS; });
+  const [goals, setGoals] = useState<YearlyGoal[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.GOALS); return saved ? JSON.parse(saved) : MOCK_GOALS; });
+  const [folders, setFolders] = useState<SharedFolder[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.FOLDERS); return saved ? JSON.parse(saved) : MOCK_SHARED_FOLDERS; });
+  const [documents, setDocuments] = useState<SharedDocument[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.DOCUMENTS); return saved ? JSON.parse(saved) : MOCK_SHARED_DOCUMENTS; });
+  const [sources, setSources] = useState<string[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.SOURCES); return saved ? JSON.parse(saved) : DEFAULT_SOURCES; });
+  const [tags, setTags] = useState<string[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.TAGS); return saved ? JSON.parse(saved) : DEFAULT_TAGS; });
+  const [trashedSources, setTrashedSources] = useState<TrashedMetadata[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.TRASHED_SOURCES); return saved ? JSON.parse(saved) : []; });
+  const [trashedTags, setTrashedTags] = useState<TrashedMetadata[]>(() => { const saved = localStorage.getItem(STORAGE_KEYS.TRASHED_TAGS); return saved ? JSON.parse(saved) : []; });
+  const [dashboardFilterId, setDashboardFilterId] = useState<string>('TEAM');
+  const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
+  const [isLoadingInvite, setIsLoadingInvite] = useState(false);
+
+  // NEW: Function to load real team members from the database
+  const loadTeamMembers = async (brokerageId: string) => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('brokerage_id', brokerageId)
+      .eq('is_deleted', false);
+    
+    if (data) {
+      const dbUsers: User[] = data.map(u => ({
+        id: u.id,
+        brokerageId: u.brokerage_id,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        role: u.role as UserRole,
+        isDeleted: u.is_deleted
+      }));
+      setUsers(dbUsers);
+    }
   };
 
   useEffect(() => {
-    const init = async () => {
-      const user = await authService.getCurrentUser();
-      if (user) {
-        setCurrentUser(user);
-        const b = await authService.getBrokerage(user.brokerageId);
-        setBrokerage(b);
-        setIsAuthenticated(true);
-        await loadTeamData(user.brokerageId);
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setIsCheckingAuth(false); return; }
+
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setCurrentUser(user);
+          const brokerageData = await authService.getBrokerage(user.brokerageId);
+          setBrokerage(brokerageData);
+          setIsAuthenticated(true);
+          await loadTeamMembers(user.brokerageId); // Load real team
+        } else {
+          await supabase.auth.signOut();
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
       }
-      setIsCheckingAuth(false);
     };
-    init();
+    checkAuth();
   }, []);
 
-  // FIXED: Corrected the use of 'l' (letter) vs '1' (number) and added missing closing parenthesis
+  // ROLE PROTECTION: Filter content based on logged-in user role
   const activeUsers = useMemo(() => users.filter(u => !u.isDeleted), [users]);
-  
-  const accessibleLeads = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? leads : leads.filter(l => 
-      l.assignedAgentId === currentUser?.id)).filter(l => !l.isDeleted), 
-    [leads, currentUser]
-  );
+  const accessibleLeads = useMemo(() => (currentUser?.role === UserRole.BROKER ? leads : leads.filter(l => l.assignedAgentId === currentUser?.id)).filter(l => !l.isDeleted), [leads, currentUser]);
+  const accessibleTasks = useMemo(() => (currentUser?.role === UserRole.BROKER ? tasks : tasks.filter(t => t.assignedUserId === currentUser?.id)), [tasks, currentUser]);
+  const accessibleDeals = useMemo(() => (currentUser?.role === UserRole.BROKER ? deals : deals.filter(d => d.assignedUserId === currentUser?.id)).filter(d => !d.isDeleted), [deals, currentUser]);
 
-  const accessibleTasks = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? tasks : tasks.filter(t => 
-      t.assignedUserId === currentUser?.id)), 
-    [tasks, currentUser]
-  );
+  const handleLogout = async () => {
+    await authService.signOut();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setBrokerage(null);
+    setView('dashboard');
+  };
+
+  const handleJoinComplete = async (inviteId: string) => {
+    await invitationService.acceptInvitation(inviteId);
+    window.location.reload(); // Refresh to load new user context
+  };
 
   const renderContent = () => {
-    if (!currentUser) return null;
-    if (currentUser.role === UserRole.AGENT && (view === 'team' || view === 'reports')) {
-        return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
+    if (!currentUser || !brokerage) return <div>Loading...</div>;
+    
+    // SECURITY: Prevent Agents from viewing Broker-only pages
+    if (currentUser.role === UserRole.AGENT && (view === 'team' || view === 'reports' || view === 'trash')) {
+      setView('dashboard');
+      return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
     }
+
     switch (view) {
-      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
-      case 'team': return <TeamView users={activeUsers} currentUser={currentUser} />;
-      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} />;
+      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
+      case 'team': return <TeamView users={activeUsers} currentUser={currentUser} onAddUser={u => setUsers(prev => [...prev, u])} onUpdateUser={u => setUsers(prev => prev.map(user => user.id === u.id ? u : user))} onDeleteUser={id => setUsers(prev => prev.map(u => u.id === id ? {...u, isDeleted: true} : u))} isDarkMode={isDarkMode} />;
+      // ... (Keep your other case statements for email, open-house, documents, etc. exactly as they were)
+      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={accessibleDeals} tasks={accessibleTasks} openHouses={accessibleOpenHouses} onNavigate={setView} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} viewingAgentId={dashboardFilterId} onSetViewingAgentId={setDashboardFilterId} goals={goals} onUpdateGoal={handleUpdateGoal} />;
     }
   };
 
-  if (isCheckingAuth) return <div className="fixed inset-0 bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
-
-  if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={() => window.location.reload()} />;
+  if (isCheckingAuth) return <div className="fixed inset-0 bg-slate-900 flex items-center justify-center text-white">Loading Agent Desk 360...</div>;
+  if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={handleJoinComplete} />;
 
   if (!isAuthenticated) {
     return authView === 'signup' ? 
@@ -125,21 +180,32 @@ const App: React.FC = () => {
       <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() => setAuthView('signup')} />;
   }
 
+  // FORCE PROFILE COMPLETION
   if (!currentUser || !brokerage) return <JoinView onComplete={() => window.location.reload()} />;
 
   return (
-    <Layout 
-      user={currentUser} 
-      users={activeUsers}
-      brokerage={brokerage}
-      currentView={view} 
-      setView={setView} 
-      onLogout={() => authService.signOut().then(() => setIsAuthenticated(false))}
-      onSwitchUser={currentUser.role === UserRole.BROKER ? (id: string) => console.log(id) : undefined}
-      navItems={INITIAL_NAV_ITEMS.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)}
-    >
-      {renderContent()}
-    </Layout>
+    <>
+      <Layout 
+        user={currentUser} 
+        users={activeUsers} 
+        brokerage={brokerage} 
+        currentView={view} 
+        setView={setView} 
+        onSwitchUser={currentUser.role === UserRole.BROKER ? handleSwitchUser : undefined} // DISABLED SWITCHING FOR AGENTS
+        onLogout={handleLogout} 
+        notifications={notifications} 
+        navItems={navItems.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)} // FILTER NAV FOR AGENTS
+        isDarkMode={isDarkMode} 
+        toggleDarkMode={toggleDarkMode} 
+        onShowBrokerAdmin={() => setShowBrokerAdmin(true)}
+      >
+        {renderContent()}
+      </Layout>
+
+      {showBrokerAdmin && currentUser.role === UserRole.BROKER && (
+        <BrokerAdminPanel currentUser={currentUser} onClose={() => setShowBrokerAdmin(false)} isDarkMode={isDarkMode} />
+      )}
+    </>
   );
 };
 
