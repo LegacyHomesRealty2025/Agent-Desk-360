@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole } from '../types.ts';
+import { invitationService } from '../services/invitationService.ts';
 
 interface TeamViewProps {
   users: User[];
@@ -158,25 +159,33 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) return;
-    
+
     if (editingUser) {
       onUpdateUser({ ...editingUser, ...formData } as User);
       setIsModalOpen(false);
     } else {
-      const newUser: User = {
-        ...formData,
-        id: `user_${Date.now()}`,
-        brokerageId: currentUser.brokerageId,
-      } as User;
-      onAddUser(newUser);
+      setIsProcessing(true);
+      try {
+        const invitation = await invitationService.createInvitation(
+          formData.email!,
+          formData.role || UserRole.AGENT,
+          currentUser.brokerageId
+        );
 
-      if (onInviteUser && formData.email) {
-        const inviteId = onInviteUser(formData.email, formData.role || UserRole.AGENT);
-        const baseUrl = window.location.origin + window.location.pathname;
-        setManualSetupLink(`${baseUrl}?invite=${inviteId}`);
+        if (invitation) {
+          const baseUrl = window.location.origin + window.location.pathname;
+          setManualSetupLink(`${baseUrl}?invite=${invitation.id}`);
+        } else {
+          alert('Failed to create invitation. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error creating invitation:', error);
+        alert('Failed to create invitation. Please try again.');
+      } finally {
+        setIsProcessing(false);
       }
     }
   };
@@ -188,12 +197,29 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
     }
   };
 
-  const handleSendInvite = (e: React.FormEvent) => {
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onInviteUser && isAdmin) {
-      const inviteId = onInviteUser(inviteEmail, inviteRole);
-      const baseUrl = window.location.origin + window.location.pathname;
-      setGeneratedInviteLink(`${baseUrl}?invite=${inviteId}`);
+    if (!isAdmin) return;
+
+    setIsProcessing(true);
+    try {
+      const invitation = await invitationService.createInvitation(
+        inviteEmail,
+        inviteRole,
+        currentUser.brokerageId
+      );
+
+      if (invitation) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        setGeneratedInviteLink(`${baseUrl}?invite=${invitation.id}`);
+      } else {
+        alert('Failed to create invitation. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating invitation:', error);
+      alert('Failed to create invitation. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 

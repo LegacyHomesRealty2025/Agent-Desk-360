@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { User, UserRole, Brokerage } from '../types.ts';
-import { Invitation } from '../App.tsx';
+import { UserRole } from '../types.ts';
+import { BrokerageInvite } from '../services/invitationService.ts';
+import { authService } from '../services/authService.ts';
 
 interface JoinViewProps {
-  invitation: Invitation;
-  brokerage: Brokerage;
-  onComplete: (user: User) => void;
+  invitation: BrokerageInvite;
+  onComplete: (inviteId: string) => void;
 }
 
-const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }) => {
+const JoinView: React.FC<JoinViewProps> = ({ invitation, onComplete }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -18,8 +18,9 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
     password: '',
     confirmPassword: ''
   });
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resizeImage = (file: File): Promise<string> => {
@@ -60,25 +61,48 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
-    const newUser: User = {
-      id: `user_${Date.now()}`,
-      brokerageId: brokerage.id,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: invitation.email,
-      role: invitation.role,
-      phone: formData.phone,
-      licenseNumber: formData.licenseNumber,
-      avatar: formData.avatar
-    };
-    onComplete(newUser);
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const success = await authService.signUp(
+        invitation.email,
+        formData.password,
+        {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          licenseNumber: formData.licenseNumber,
+          avatarUrl: formData.avatar,
+          role: invitation.role,
+          brokerageId: invitation.brokerageId
+        }
+      );
+
+      if (success) {
+        onComplete(invitation.id);
+      } else {
+        setError('Failed to create account. Please try again.');
+        setIsProcessing(false);
+      }
+    } catch (err: any) {
+      console.error('Error creating account:', err);
+      setError(err.message || 'Failed to create account. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -102,7 +126,7 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
               <div className="space-y-4">
                  <h1 className="text-4xl font-black leading-tight tracking-tight">Join the Elite Roster.</h1>
                  <p className="text-indigo-100 font-medium leading-relaxed opacity-80">
-                   {brokerage.name} has invited you to set up your professional agent profile on Agent Desk 360.
+                   You've been invited to set up your professional agent profile on Agent Desk 360.
                  </p>
               </div>
            </div>
@@ -166,7 +190,14 @@ const JoinView: React.FC<JoinViewProps> = ({ invitation, brokerage, onComplete }
               </div>
             </div>
 
-            <button type="submit" disabled={isProcessing} className="w-full py-6 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-[0.98]">
+            {error && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 px-6 py-4 rounded-2xl font-bold">
+                <i className="fas fa-exclamation-circle mr-2"></i>
+                {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={isProcessing} className="w-full py-6 bg-indigo-600 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center space-x-3 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
                {isProcessing ? (
                  <i className="fas fa-circle-notch fa-spin"></i>
                ) : (

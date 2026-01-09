@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Lead, User, Deal, UserRole, OpenHouse, Task, LeadStatus, YearlyGoal } from '../types.ts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Cell as PieCell } from 'recharts';
+import { invitationService } from '../services/invitationService.ts';
 
 interface DashboardProps {
   leads: Lead[];
@@ -10,7 +11,6 @@ interface DashboardProps {
   tasks: Task[];
   openHouses: OpenHouse[];
   onNavigate: (view: string) => void;
-  onInviteUser?: (email: string, role: UserRole) => string;
   isDarkMode?: boolean;
   toggleDarkMode?: () => void;
   viewingAgentId: string;
@@ -79,16 +79,15 @@ const CustomPieTooltip = ({ active, payload, isDarkMode }: any) => {
   return null;
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ 
-  leads, 
-  user, 
-  agents, 
-  deals, 
-  tasks, 
-  openHouses, 
-  onNavigate, 
-  onInviteUser, 
-  isDarkMode, 
+const Dashboard: React.FC<DashboardProps> = ({
+  leads,
+  user,
+  agents,
+  deals,
+  tasks,
+  openHouses,
+  onNavigate,
+  isDarkMode,
   toggleDarkMode,
   viewingAgentId,
   onSetViewingAgentId,
@@ -263,12 +262,25 @@ const Dashboard: React.FC<DashboardProps> = ({
     setIsInviteModalOpen(true);
   };
 
-  const handleSendInvite = (e: React.FormEvent) => {
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onInviteUser) {
-      const inviteId = onInviteUser(inviteEmail, inviteRole);
-      const baseUrl = window.location.origin + window.location.pathname;
-      setGeneratedInviteLink(`${baseUrl}?invite=${inviteId}`);
+
+    try {
+      const invitation = await invitationService.createInvitation(
+        inviteEmail,
+        inviteRole,
+        user.brokerageId
+      );
+
+      if (invitation) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        setGeneratedInviteLink(`${baseUrl}?invite=${invitation.id}`);
+      } else {
+        alert('Failed to create invitation. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating invitation:', error);
+      alert('Failed to create invitation. Please try again.');
     }
   };
 
