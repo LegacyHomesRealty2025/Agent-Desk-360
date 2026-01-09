@@ -30,7 +30,7 @@ import BrokerAdminPanel from './components/BrokerAdminPanel.tsx';
 const MOCKED_NOW = new Date('2026-01-06T09:00:00');
 const TZ = 'America/Los_Angeles';
 
-const INITIAL_NAV_ITEMS: any[] = [
+const INITIAL_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
   { id: 'email', label: 'Email Center', icon: 'fa-envelope' },
   { id: 'leads', label: 'Leads', icon: 'fa-users' },
@@ -54,14 +54,6 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [brokerage, setBrokerage] = useState<Brokerage | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [openHouses, setOpenHouses] = useState<OpenHouse[]>([]);
-  const [emails, setEmails] = useState<EmailMessage[]>([]);
-  const [goals, setGoals] = useState<YearlyGoal[]>([]);
-  const [folders, setFolders] = useState<SharedFolder[]>([]);
-  const [documents, setDocuments] = useState<SharedDocument[]>([]);
   const [view, setView] = useState<string>('dashboard');
   const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
@@ -86,35 +78,21 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  // FIXED: Corrected syntax using 'l' and 't' variables and fixed missing closing bracket
   const activeUsers = useMemo(() => users.filter(u => !u.isDeleted), [users]);
-  
-  const accessibleLeads = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? leads : leads.filter(l => 
-      l.assignedAgentId === currentUser?.id)).filter(l => !l.isDeleted), 
-    [leads, currentUser]
-  );
-
-  const accessibleTasks = useMemo(() => 
-    (currentUser?.role === UserRole.BROKER ? tasks : tasks.filter(t => 
-      t.assignedUserId === currentUser?.id)), 
-    [tasks, currentUser]
-  );
 
   const renderContent = () => {
-    if (!currentUser) return null;
+    if (!currentUser || !brokerage) return null;
     
-    // Security check: Agents trying to access Broker-only views are redirected
+    // Security: Stop Agents from accessing Broker views
     if (currentUser.role === UserRole.AGENT && (view === 'team' || view === 'reports')) {
-        return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={deals} tasks={accessibleTasks} openHouses={openHouses} onNavigate={setView} />;
+      return <Dashboard user={currentUser} agents={activeUsers} />;
     }
 
     switch (view) {
-      case 'dashboard': return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={deals} tasks={accessibleTasks} openHouses={openHouses} onNavigate={setView} />;
+      case 'dashboard': return <Dashboard user={currentUser} agents={activeUsers} />;
       case 'team': return <TeamView users={activeUsers} currentUser={currentUser} />;
-      case 'leads': return <LeadList leads={accessibleLeads} onSelectLead={(l: Lead) => setView('dashboard')} />;
-      case 'profile': return <ProfileView user={currentUser} brokerage={brokerage!} onUpdate={setCurrentUser} />;
-      default: return <Dashboard leads={accessibleLeads} user={currentUser} agents={activeUsers} deals={deals} tasks={accessibleTasks} openHouses={openHouses} onNavigate={setView} />;
+      case 'profile': return <ProfileView user={currentUser} brokerage={brokerage} onUpdate={setCurrentUser} />;
+      default: return <Dashboard user={currentUser} agents={activeUsers} />;
     }
   };
 
@@ -123,6 +101,30 @@ const App: React.FC = () => {
   if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={() => window.location.reload()} />;
 
   if (!isAuthenticated) {
-    return authView === 'signup' ? 
-      <SignupView onSignupSuccess={() => setIsAuthenticated(true)} onNavigateToLogin={() => setAuthView('login')} /> : 
-      <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() =>
+    return authView === 'signup' ? (
+      <SignupView onSignupSuccess={() => setIsAuthenticated(true)} onNavigateToLogin={() => setAuthView('login')} />
+    ) : (
+      <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() => setAuthView('signup')} />
+    );
+  }
+
+  // Force profile completion if authenticated but data is missing
+  if (!currentUser || !brokerage) return <JoinView onComplete={() => window.location.reload()} />;
+
+  return (
+    <Layout 
+      user={currentUser} 
+      users={activeUsers}
+      brokerage={brokerage}
+      currentView={view} 
+      setView={setView} 
+      onLogout={() => authService.signOut().then(() => setIsAuthenticated(false))}
+      onSwitchUser={currentUser.role === UserRole.BROKER ? (id: string) => console.log('Switch to', id) : undefined}
+      navItems={INITIAL_NAV_ITEMS.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)}
+    >
+      {renderContent()}
+    </Layout>
+  );
+};
+
+export default App;
