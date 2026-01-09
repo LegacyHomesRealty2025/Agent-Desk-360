@@ -158,13 +158,28 @@ Deno.serve(async (req: Request) => {
         },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in send-email function:", error);
-    
+    console.error("Error type:", typeof error);
+    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+
+    let errorMessage = "Failed to send email";
+
+    if (error?.message) {
+      errorMessage = error.message;
+    } else if (typeof error === "string") {
+      errorMessage = error;
+    } else if (error?.error) {
+      errorMessage = error.error;
+    } else if (error) {
+      errorMessage = String(error);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "Failed to send email",
+        error: errorMessage,
+        details: error?.stack || error?.toString?.() || "No additional details available",
       }),
       {
         status: 400,

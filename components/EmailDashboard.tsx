@@ -91,10 +91,22 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
         }
       );
 
+      console.log('Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
 
+      console.log('Send email response:', result);
+
       if (!result.success) {
-        throw new Error(result.error || 'Failed to send email');
+        const errorMsg = result.error || 'Failed to send email';
+        const details = result.details ? `\n\nDetails: ${result.details}` : '';
+        throw new Error(`${errorMsg}${details}`);
       }
 
       const newEmail: EmailMessage = {
