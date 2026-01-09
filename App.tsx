@@ -58,9 +58,20 @@ const App: React.FC = () => {
   const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
+  // Load live data from Supabase
   const loadTeamData = async (bId: string) => {
     const { data } = await supabase.from('user_profiles').select('*').eq('brokerage_id', bId).eq('is_deleted', false);
-    if (data) setUsers(data.map(u => ({ id: u.id, brokerageId: u.brokerage_id, firstName: u.first_name, lastName: u.last_name, email: u.email, role: u.role as UserRole, isDeleted: u.is_deleted })));
+    if (data) {
+      setUsers(data.map(u => ({
+        id: u.id,
+        brokerageId: u.brokerage_id,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        email: u.email,
+        role: u.role as UserRole,
+        isDeleted: u.is_deleted
+      })));
+    }
   };
 
   useEffect(() => {
@@ -79,6 +90,22 @@ const App: React.FC = () => {
   }, []);
 
   const activeUsers = useMemo(() => users.filter(u => !u.isDeleted), [users]);
+  
+  // Define notifications to prevent the 'hasEvents' undefined error
+  const notifications = useMemo(() => ({
+    items: [],
+    hasTasks: false,
+    hasEvents: false,
+    totalCount: 0
+  }), []);
+
+  const handleLogout = async () => {
+    await authService.signOut();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setBrokerage(null);
+    setView('dashboard');
+  };
 
   const renderContent = () => {
     if (!currentUser || !brokerage) return null;
@@ -100,11 +127,21 @@ const App: React.FC = () => {
 
   if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={() => window.location.reload()} />;
 
+  // FIXED AUTH VIEW LOGIC (Fixes Line 128 Unexpected Token)
   if (!isAuthenticated) {
-    return authView === 'signup' ? (
-      <SignupView onSignupSuccess={() => setIsAuthenticated(true)} onNavigateToLogin={() => setAuthView('login')} />
-    ) : (
-      <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() => setAuthView('signup')} />
+    if (authView === 'signup') {
+      return (
+        <SignupView 
+          onSignupSuccess={() => setIsAuthenticated(true)} 
+          onNavigateToLogin={() => setAuthView('login')} 
+        />
+      );
+    }
+    return (
+      <LoginView 
+        onLoginSuccess={() => setIsAuthenticated(true)} 
+        onNavigateToSignup={() => setAuthView('signup')} 
+      />
     );
   }
 
@@ -118,7 +155,9 @@ const App: React.FC = () => {
       brokerage={brokerage}
       currentView={view} 
       setView={setView} 
-      onLogout={() => authService.signOut().then(() => setIsAuthenticated(false))}
+      onLogout={handleLogout}
+      notifications={notifications}
+      // HIDE SWITCHER AND BROKER TABS FOR AGENTS
       onSwitchUser={currentUser.role === UserRole.BROKER ? (id: string) => console.log('Switch to', id) : undefined}
       navItems={INITIAL_NAV_ITEMS.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)}
     >
