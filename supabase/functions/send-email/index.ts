@@ -54,14 +54,14 @@ Deno.serve(async (req: Request) => {
       throw new Error("Missing required fields: subject, body, and recipients");
     }
 
-    const userEmail = user.email || "noreply@agentdesk360.com";
+    const senderEmail = "Josephine Sharma <Josephine@LegacyHomesRE.com>";
 
     const { data: emailData, error: emailError } = await supabase
       .from("emails")
       .insert({
         subject,
         body,
-        sender_email: userEmail,
+        sender_email: senderEmail,
         folder: "SENT",
         is_bulk: recipients.length > 1,
         template_id: templateId || null,
@@ -96,7 +96,6 @@ Deno.serve(async (req: Request) => {
       throw new Error("RESEND_API_KEY is not configured in Supabase Edge Function secrets. Please add it in your Supabase Dashboard under Settings > Edge Functions > Manage secrets.");
     }
 
-    const senderEmail = Deno.env.get("SENDER_EMAIL") || "onboarding@resend.dev";
     console.log(`Using sender email: ${senderEmail}`);
 
     const resend = new Resend(resendApiKey);
