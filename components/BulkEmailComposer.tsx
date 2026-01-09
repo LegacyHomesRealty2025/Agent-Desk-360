@@ -31,6 +31,7 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
 }) => {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [manualEmails, setManualEmails] = useState('');
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [subject, setSubject] = useState('');
@@ -69,6 +70,13 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
     );
   }, [leads, searchTerm]);
 
+  const totalRecipients = useMemo(() => {
+    const manualCount = manualEmails.trim()
+      ? manualEmails.split(',').filter(e => e.trim().includes('@')).length
+      : 0;
+    return selectedLeadIds.size + manualCount;
+  }, [selectedLeadIds, manualEmails]);
+
   const toggleLead = (leadId: string) => {
     const newSelected = new Set(selectedLeadIds);
     if (newSelected.has(leadId)) {
@@ -96,7 +104,7 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedLeadIds.size === 0 || !subject || !body) return;
+    if (selectedLeadIds.size === 0 && !manualEmails.trim() || !subject || !body) return;
 
     setIsSending(true);
 
@@ -109,6 +117,18 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
           name: `${lead!.firstName} ${lead!.lastName}`,
           contactId: lead!.id,
         }));
+
+      if (manualEmails.trim()) {
+        const manualRecipients = manualEmails
+          .split(',')
+          .map(email => email.trim())
+          .filter(email => email.includes('@'))
+          .map(email => ({
+            email,
+            name: email.split('@')[0],
+          }));
+        recipients.push(...manualRecipients);
+      }
 
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
@@ -169,7 +189,7 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
                 Bulk Email
               </h3>
               <p className={`text-sm font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {selectedLeadIds.size} recipient{selectedLeadIds.size !== 1 ? 's' : ''} selected
+                {totalRecipients} recipient{totalRecipients !== 1 ? 's' : ''} selected
               </p>
             </div>
           </div>
@@ -194,6 +214,18 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
                   className={`w-full px-4 py-3 pl-11 rounded-2xl border font-bold text-sm outline-none transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500'}`}
                 />
                 <i className={`fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-sm ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+              </div>
+              <div className="space-y-2">
+                <label className={`text-xs font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Add Manual Emails
+                </label>
+                <textarea
+                  placeholder="e.g. email1@gmail.com, email2@gmail.com"
+                  value={manualEmails}
+                  onChange={(e) => setManualEmails(e.target.value)}
+                  className={`w-full px-4 py-3 rounded-2xl border font-medium text-sm outline-none transition-all resize-none ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-blue-500' : 'bg-slate-50 border-slate-200 focus:bg-white focus:border-blue-500'}`}
+                  rows={2}
+                />
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -319,7 +351,7 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
 
             <div className={`p-8 border-t flex items-center justify-between shrink-0 ${isDarkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-50 bg-slate-50/30'}`}>
               <p className={`text-sm font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Ready to send to {selectedLeadIds.size} recipient{selectedLeadIds.size !== 1 ? 's' : ''}
+                Ready to send to {totalRecipients} recipient{totalRecipients !== 1 ? 's' : ''}
               </p>
               <div className="flex items-center space-x-4">
                 <button
@@ -331,7 +363,7 @@ const BulkEmailComposer: React.FC<BulkEmailComposerProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSending || selectedLeadIds.size === 0 || !subject || !body}
+                  disabled={isSending || totalRecipients === 0 || !subject || !body}
                   className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {isSending ? (

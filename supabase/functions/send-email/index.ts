@@ -12,12 +12,14 @@ interface EmailRecipient {
   email: string;
   name: string;
   contactId?: string;
+  type?: 'to' | 'cc';
 }
 
 interface SendEmailRequest {
   subject: string;
   body: string;
   recipients: EmailRecipient[];
+  ccRecipients?: EmailRecipient[];
   templateId?: string;
 }
 
@@ -51,11 +53,16 @@ Deno.serve(async (req: Request) => {
 
     console.log("Authenticated user:", user.email);
 
-    const { subject, body, recipients, templateId }: SendEmailRequest = await req.json();
+    const { subject, body, recipients, ccRecipients, templateId }: SendEmailRequest = await req.json();
 
     if (!subject || !body || !recipients || recipients.length === 0) {
       throw new Error("Missing required fields: subject, body, and recipients");
     }
+
+    const allRecipients = [
+      ...recipients.map(r => ({ ...r, type: 'to' as const })),
+      ...(ccRecipients || []).map(r => ({ ...r, type: 'cc' as const }))
+    ];
 
     const senderEmail = "Josephine Sharma <josephine@legacyhomesre.com>";
 
@@ -96,11 +103,12 @@ E-mail: JSharmaREO@yahoo.com</p>
       throw emailError;
     }
 
-    const recipientRecords = recipients.map(recipient => ({
+    const recipientRecords = allRecipients.map(recipient => ({
       email_id: emailData.id,
       recipient_email: recipient.email,
       recipient_name: recipient.name,
       contact_id: recipient.contactId || null,
+      recipient_type: recipient.type,
       status: "sent",
     }));
 
@@ -122,39 +130,46 @@ E-mail: JSharmaREO@yahoo.com</p>
 
     const resend = new Resend(resendApiKey);
 
-    const emailResults = [];
-    for (const recipient of recipients) {
-      try {
-        const result = await resend.emails.send({
-          from: senderEmail,
-          to: recipient.email,
-          subject: subject,
-          html: bodyWithSignature,
-        });
-        console.log(`Email sent successfully to ${recipient.email}. Resend ID: ${result.data?.id}`);
-        emailResults.push({ email: recipient.email, success: true, id: result.data?.id });
-      } catch (emailError: any) {
-        const errorMessage = emailError?.message || String(emailError);
-        console.error(`Failed to send email to ${recipient.email}:`, {
-          error: errorMessage,
-          details: emailError,
-        });
-        emailResults.push({ email: recipient.email, success: false, error: errorMessage });
+    const toEmails = recipients.map(r => r.email);
+    const ccEmails = ccRecipients?.map(r => r.email) || [];
 
-        await supabase
-          .from("email_recipients")
-          .update({ status: "failed" })
-          .eq("email_id", emailData.id)
-          .eq("recipient_email", recipient.email);
-      }
+    const emailResults = [];
+    try {
+      const result = await resend.emails.send({
+        from: senderEmail,
+        to: toEmails,
+        cc: ccEmails.length > 0 ? ccEmails : undefined,
+        subject: subject,
+        html: bodyWithSignature,
+      });
+      console.log(`Email sent successfully. Resend ID: ${result.data?.id}`);
+
+      allRecipients.forEach(recipient => {
+        emailResults.push({ email: recipient.email, type: recipient.type, success: true, id: result.data?.id });
+      });
+    } catch (emailError: any) {
+      const errorMessage = emailError?.message || String(emailError);
+      console.error(`Failed to send email:`, {
+        error: errorMessage,
+        details: emailError,
+      });
+
+      allRecipients.forEach(recipient => {
+        emailResults.push({ email: recipient.email, type: recipient.type, success: false, error: errorMessage });
+      });
+
+      await supabase
+        .from("email_recipients")
+        .update({ status: "failed" })
+        .eq("email_id", emailData.id);
     }
 
-    console.log(`Email sent to ${recipients.length} recipient(s)`, emailResults);
+    console.log(`Email sent to ${allRecipients.length} recipient(s) (${recipients.length} TO, ${ccEmails.length} CC)`, emailResults);
 
     const failedEmails = emailResults.filter(r => !r.success);
     const successfulEmails = emailResults.filter(r => r.success);
 
-    if (failedEmails.length === recipients.length) {
+    if (failedEmails.length === allRecipients.length) {
       const firstError = failedEmails[0]?.error || "Unknown error";
       throw new Error(`All emails failed to send. Error: ${firstError}`);
     }
@@ -163,12 +178,14 @@ E-mail: JSharmaREO@yahoo.com</p>
       JSON.stringify({
         success: true,
         emailId: emailData.id,
-        recipientCount: recipients.length,
+        recipientCount: allRecipients.length,
+        toCount: recipients.length,
+        ccCount: ccEmails.length,
         successCount: successfulEmails.length,
         failureCount: failedEmails.length,
         message: failedEmails.length > 0
-          ? `Email sent to ${successfulEmails.length} of ${recipients.length} recipients. ${failedEmails.length} failed.`
-          : `Email sent successfully to ${recipients.length} recipient(s)`,
+          ? `Email sent to ${successfulEmails.length} of ${allRecipients.length} recipients. ${failedEmails.length} failed.`
+          : `Email sent successfully to ${allRecipients.length} recipient(s)`,
         results: emailResults,
       }),
       {

@@ -31,6 +31,7 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [composeData, setComposeData] = useState({
     to: '',
+    cc: '',
     subject: '',
     body: ''
   });
@@ -72,6 +73,13 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
         throw new Error('Not authenticated. Please log in again.');
       }
 
+      const ccRecipients = composeData.cc
+        ? composeData.cc.split(',').map(email => ({
+            email: email.trim(),
+            name: email.trim().split('@')[0],
+          }))
+        : [];
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
         {
@@ -88,6 +96,7 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
               email: composeData.to,
               name: composeData.to.split('@')[0],
             }],
+            ...(ccRecipients.length > 0 && { ccRecipients }),
           }),
         }
       );
@@ -124,7 +133,7 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
 
       onSendEmail(newEmail);
       setIsComposeOpen(false);
-      setComposeData({ to: '', subject: '', body: '' });
+      setComposeData({ to: '', cc: '', subject: '', body: '' });
       alert('Email sent successfully via Resend!');
     } catch (error) {
       console.error('Error sending email:', error);
@@ -334,12 +343,22 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
                <div className="p-10 space-y-6 overflow-y-auto scrollbar-hide">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recipient Address</label>
-                    <input 
-                      required 
-                      type="email" 
-                      placeholder="e.g. client@gmail.com" 
+                    <input
+                      required
+                      type="email"
+                      placeholder="e.g. client@gmail.com"
                       value={composeData.to}
                       onChange={e => setComposeData({...composeData, to: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CC (Optional, comma-separated)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. person1@gmail.com, person2@gmail.com"
+                      value={composeData.cc}
+                      onChange={e => setComposeData({...composeData, cc: e.target.value})}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold text-sm outline-none focus:ring-4 focus:ring-indigo-500/10 focus:bg-white focus:border-indigo-500 transition-all"
                     />
                   </div>
