@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.89.0";
+import { Resend } from "npm:resend@3.2.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,13 +30,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Get authorization token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("No authorization header");
     }
 
-    // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
@@ -44,23 +43,19 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    // Get the authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       throw new Error("Unauthorized");
     }
 
-    // Parse request body
     const { subject, body, recipients, templateId }: SendEmailRequest = await req.json();
 
     if (!subject || !body || !recipients || recipients.length === 0) {
       throw new Error("Missing required fields: subject, body, and recipients");
     }
 
-    // Get user's email from auth
     const senderEmail = user.email || "noreply@agentdesk360.com";
 
-    // Create email record
     const { data: emailData, error: emailError } = await supabase
       .from("emails")
       .insert({
@@ -79,7 +74,6 @@ Deno.serve(async (req: Request) => {
       throw emailError;
     }
 
-    // Create recipient records
     const recipientRecords = recipients.map(recipient => ({
       email_id: emailData.id,
       recipient_email: recipient.email,
@@ -97,20 +91,36 @@ Deno.serve(async (req: Request) => {
       throw recipientsError;
     }
 
-    // TODO: Integrate with email service provider (Resend, SendGrid, etc.)
-    // For now, we just store in database
-    // Example with Resend:
-    // const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    // for (const recipient of recipients) {
-    //   await resend.emails.send({
-    //     from: "Raj@LegacyHomesRE.com",
-    //     to: recipient.email,
-    //     subject: subject,
-    //     html: body,
-    //   });
-    // }
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
 
-    console.log(`Email sent to ${recipients.length} recipient(s)`);
+    const resend = new Resend(resendApiKey);
+
+    const emailResults = [];
+    for (const recipient of recipients) {
+      try {
+        const result = await resend.emails.send({
+          from: "Raj@LegacyHomesRE.com",
+          to: recipient.email,
+          subject: subject,
+          html: body,
+        });
+        emailResults.push({ email: recipient.email, success: true, id: result.data?.id });
+      } catch (emailError) {
+        console.error(`Failed to send email to ${recipient.email}:`, emailError);
+        emailResults.push({ email: recipient.email, success: false, error: emailError.message });
+
+        await supabase
+          .from("email_recipients")
+          .update({ status: "failed" })
+          .eq("email_id", emailData.id)
+          .eq("recipient_email", recipient.email);
+      }
+    }
+
+    console.log(`Email sent to ${recipients.length} recipient(s)`, emailResults);
 
     return new Response(
       JSON.stringify({
