@@ -14,6 +14,13 @@ interface UserProfile {
   created_at: string;
 }
 
+interface PendingInvite {
+  id: string;
+  email: string;
+  status: string;
+  created_at: string;
+}
+
 interface BrokerAdminPanelProps {
   currentUser: User;
   onClose: () => void;
@@ -26,6 +33,7 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
   isDarkMode
 }) => {
   const [agents, setAgents] = useState<UserProfile[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isSendingInvite, setIsSendingInvite] = useState(false);
@@ -33,6 +41,7 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
 
   useEffect(() => {
     loadAgents();
+    loadPendingInvites();
   }, []);
 
   const loadAgents = async () => {
@@ -51,6 +60,22 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
       console.error('Error loading agents:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPendingInvites = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('brokerage_invites')
+        .select('id, email, status, created_at')
+        .eq('brokerage_id', currentUser.brokerageId)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPendingInvites(data || []);
+    } catch (error) {
+      console.error('Error loading pending invites:', error);
     }
   };
 
@@ -96,6 +121,7 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
 
       setMessage('Invitation sent successfully!');
       setInviteEmail('');
+      loadPendingInvites();
       setTimeout(() => setMessage(''), 3000);
     } catch (error: any) {
       console.error('Error in handleInviteAgent:', error);
@@ -103,6 +129,32 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
     } finally {
       setIsSendingInvite(false);
     }
+  };
+
+  const handleDeleteInvite = async (inviteId: string, email: string) => {
+    if (!confirm(`Cancel invitation for ${email}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('brokerage_invites')
+        .delete()
+        .eq('id', inviteId);
+
+      if (error) throw error;
+
+      setMessage('Invitation cancelled');
+      loadPendingInvites();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to cancel invitation');
+    }
+  };
+
+  const copyInviteLink = (inviteId: string) => {
+    const inviteUrl = `${window.location.origin}/?invite=${inviteId}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setMessage('Invite link copied to clipboard!');
+    setTimeout(() => setMessage(''), 3000);
   };
 
   const handleDeleteAgent = async (agentId: string) => {
@@ -187,11 +239,60 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
               </button>
             </form>
             {message && (
-              <div className={`mt-4 p-3 rounded-xl text-sm font-bold ${message.includes('success') ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>
+              <div className={`mt-4 p-3 rounded-xl text-sm font-bold ${message.includes('success') || message.includes('copied') || message.includes('cancelled') ? 'bg-green-50 text-green-700' : 'bg-rose-50 text-rose-700'}`}>
                 {message}
               </div>
             )}
           </div>
+
+          {pendingInvites.length > 0 && (
+            <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+              <h4 className={`text-lg font-black mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                Pending Invitations ({pendingInvites.length})
+              </h4>
+              <div className="space-y-3">
+                {pendingInvites.map(invite => (
+                  <div
+                    key={invite.id}
+                    className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-amber-900/20 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
+                          <i className="fas fa-clock text-sm" />
+                        </div>
+                        <div>
+                          <p className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                            {invite.email}
+                          </p>
+                          <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                            Sent {new Date(invite.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => copyInviteLink(invite.id)}
+                          className={`px-3 py-2 rounded-lg font-bold text-xs transition-all ${isDarkMode ? 'text-slate-400 hover:bg-slate-800 hover:text-blue-400' : 'text-slate-500 hover:bg-slate-100 hover:text-blue-600'}`}
+                          title="Copy invite link"
+                        >
+                          <i className="fas fa-copy mr-1" />
+                          Copy Link
+                        </button>
+                        <button
+                          onClick={() => handleDeleteInvite(invite.id, invite.email)}
+                          className={`px-3 py-2 rounded-lg font-bold text-xs transition-all ${isDarkMode ? 'text-slate-400 hover:bg-rose-900/20 hover:text-rose-400' : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'}`}
+                          title="Cancel invitation"
+                        >
+                          <i className="fas fa-trash" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <h4 className={`text-lg font-black mb-4 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
