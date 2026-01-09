@@ -54,14 +54,14 @@ Deno.serve(async (req: Request) => {
       throw new Error("Missing required fields: subject, body, and recipients");
     }
 
-    const senderEmail = user.email || "noreply@agentdesk360.com";
+    const userEmail = user.email || "noreply@agentdesk360.com";
 
     const { data: emailData, error: emailError } = await supabase
       .from("emails")
       .insert({
         subject,
         body,
-        sender_email: senderEmail,
+        sender_email: userEmail,
         folder: "SENT",
         is_bulk: recipients.length > 1,
         template_id: templateId || null,
@@ -93,8 +93,11 @@ Deno.serve(async (req: Request) => {
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
-      throw new Error("RESEND_API_KEY is not configured");
+      throw new Error("RESEND_API_KEY is not configured in Supabase Edge Function secrets. Please add it in your Supabase Dashboard under Settings > Edge Functions > Manage secrets.");
     }
+
+    const senderEmail = Deno.env.get("SENDER_EMAIL") || "onboarding@resend.dev";
+    console.log(`Using sender email: ${senderEmail}`);
 
     const resend = new Resend(resendApiKey);
 
@@ -102,15 +105,20 @@ Deno.serve(async (req: Request) => {
     for (const recipient of recipients) {
       try {
         const result = await resend.emails.send({
-          from: "Raj@LegacyHomesRE.com",
+          from: senderEmail,
           to: recipient.email,
           subject: subject,
           html: body,
         });
+        console.log(`Email sent successfully to ${recipient.email}. Resend ID: ${result.data?.id}`);
         emailResults.push({ email: recipient.email, success: true, id: result.data?.id });
-      } catch (emailError) {
-        console.error(`Failed to send email to ${recipient.email}:`, emailError);
-        emailResults.push({ email: recipient.email, success: false, error: emailError.message });
+      } catch (emailError: any) {
+        const errorMessage = emailError?.message || String(emailError);
+        console.error(`Failed to send email to ${recipient.email}:`, {
+          error: errorMessage,
+          details: emailError,
+        });
+        emailResults.push({ email: recipient.email, success: false, error: errorMessage });
 
         await supabase
           .from("email_recipients")
@@ -122,12 +130,25 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Email sent to ${recipients.length} recipient(s)`, emailResults);
 
+    const failedEmails = emailResults.filter(r => !r.success);
+    const successfulEmails = emailResults.filter(r => r.success);
+
+    if (failedEmails.length === recipients.length) {
+      const firstError = failedEmails[0]?.error || "Unknown error";
+      throw new Error(`All emails failed to send. Error: ${firstError}`);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         emailId: emailData.id,
         recipientCount: recipients.length,
-        message: `Email sent successfully to ${recipients.length} recipient(s)`,
+        successCount: successfulEmails.length,
+        failureCount: failedEmails.length,
+        message: failedEmails.length > 0
+          ? `Email sent to ${successfulEmails.length} of ${recipients.length} recipients. ${failedEmails.length} failed.`
+          : `Email sent successfully to ${recipients.length} recipient(s)`,
+        results: emailResults,
       }),
       {
         status: 200,
