@@ -62,21 +62,43 @@ const BrokerAdminPanel: React.FC<BrokerAdminPanelProps> = ({
     setMessage('');
 
     try {
+      const email = inviteEmail.trim().toLowerCase();
+
+      // Check if there's already a pending invitation for this email
+      const { data: existingInvite } = await supabase
+        .from('brokerage_invites')
+        .select('id, status')
+        .eq('brokerage_id', currentUser.brokerageId)
+        .eq('email', email)
+        .eq('status', 'PENDING')
+        .maybeSingle();
+
+      if (existingInvite) {
+        setMessage('An invitation has already been sent to this email');
+        setTimeout(() => setMessage(''), 3000);
+        return;
+      }
+
+      // Create new invitation
       const { error } = await supabase
         .from('brokerage_invites')
         .insert([{
           brokerage_id: currentUser.brokerageId,
-          email: inviteEmail.trim(),
+          email: email,
           role: 'AGENT',
           invited_by: currentUser.id,
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Invitation error:', error);
+        throw error;
+      }
 
       setMessage('Invitation sent successfully!');
       setInviteEmail('');
       setTimeout(() => setMessage(''), 3000);
     } catch (error: any) {
+      console.error('Error in handleInviteAgent:', error);
       setMessage(error.message || 'Failed to send invitation');
     } finally {
       setIsSendingInvite(false);
