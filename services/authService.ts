@@ -115,6 +115,57 @@ export const authService = {
     }
   },
 
+  async signUp(
+    email: string,
+    password: string,
+    profile: {
+      firstName: string;
+      lastName: string;
+      phone: string;
+      licenseNumber: string;
+      avatarUrl: string;
+      role: UserRole;
+      brokerageId: string;
+    }
+  ): Promise<boolean> {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError || !authData.user) {
+        console.error('Auth signup error:', authError);
+        throw authError || new Error('Failed to create auth user');
+      }
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: authData.user.id,
+          brokerage_id: profile.brokerageId,
+          email,
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          role: profile.role,
+          phone: profile.phone,
+          license_number: profile.licenseNumber,
+          avatar_url: profile.avatarUrl,
+          is_deleted: false,
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw profileError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in signUp:', error);
+      throw error;
+    }
+  },
+
   async signOut(): Promise<void> {
     await supabase.auth.signOut();
   },

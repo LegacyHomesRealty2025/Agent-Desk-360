@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserRole } from '../types.ts';
-import { invitationService } from '../services/invitationService.ts';
+import { invitationService, BrokerageInvite } from '../services/invitationService.ts';
 
 interface TeamViewProps {
   users: User[];
@@ -17,7 +17,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
   const [orderedUsers, setOrderedUsers] = useState<User[]>([]);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [dragOverUserId, setDragOverUserId] = useState<string | null>(null);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -28,7 +28,9 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
   const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.AGENT);
   const [generatedInviteLink, setGeneratedInviteLink] = useState('');
   const [manualSetupLink, setManualSetupLink] = useState('');
-  
+  const [pendingInvitations, setPendingInvitations] = useState<BrokerageInvite[]>([]);
+  const [invitationToDelete, setInvitationToDelete] = useState<BrokerageInvite | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = currentUser.role === UserRole.BROKER;
 
@@ -40,6 +42,17 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
     });
     setOrderedUsers(sorted);
   }, [users]);
+
+  useEffect(() => {
+    loadPendingInvitations();
+  }, [currentUser.brokerageId]);
+
+  const loadPendingInvitations = async () => {
+    if (isAdmin) {
+      const invitations = await invitationService.getPendingInvitations(currentUser.brokerageId);
+      setPendingInvitations(invitations);
+    }
+  };
 
   const initialForm: Partial<User> = {
     firstName: '',
@@ -212,6 +225,7 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
       if (invitation) {
         const baseUrl = window.location.origin + window.location.pathname;
         setGeneratedInviteLink(`${baseUrl}?invite=${invitation.id}`);
+        await loadPendingInvitations();
       } else {
         alert('Failed to create invitation. Please try again.');
       }
@@ -221,6 +235,26 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDeleteInvitation = async () => {
+    if (!invitationToDelete || !isAdmin) return;
+
+    try {
+      await invitationService.deleteInvitation(invitationToDelete.id);
+      await loadPendingInvitations();
+      setInvitationToDelete(null);
+    } catch (error) {
+      console.error('Error deleting invitation:', error);
+      alert('Failed to delete invitation. Please try again.');
+    }
+  };
+
+  const copyInvitationLink = (inviteId: string) => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const link = `${baseUrl}?invite=${inviteId}`;
+    navigator.clipboard.writeText(link);
+    alert('Invitation link copied to clipboard!');
   };
 
   const copyManualLink = () => {
@@ -379,7 +413,47 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Pending Invitations Section */}
+      {isAdmin && pendingInvitations.length > 0 && (
+        <div className={`rounded-[2.5rem] border shadow-sm p-8 transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <h3 className={`font-black tracking-tight !text-base ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Pending Invitations</h3>
+              <div className="bg-yellow-50 text-yellow-600 px-4 py-1.5 rounded-2xl font-black border border-yellow-100 shadow-sm">
+                {pendingInvitations.length}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {pendingInvitations.map((invitation) => (
+              <div key={invitation.id} className={`flex items-center justify-between p-6 rounded-2xl border transition-all ${isDarkMode ? 'bg-slate-800/50 border-slate-700 hover:bg-slate-800' : 'bg-slate-50 border-slate-200 hover:bg-white hover:shadow-md'}`}>
+                <div className="flex items-center space-x-4 flex-1">
+                  <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <i className="fas fa-clock"></i>
+                  </div>
+                  <div className="flex-1">
+                    <p className={`font-black ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>{invitation.email}</p>
+                    <p className="text-slate-400 font-bold uppercase tracking-wider">Role: {invitation.role}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-slate-400 font-medium">Sent {new Date(invitation.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 ml-6">
+                  <button onClick={() => copyInvitationLink(invitation.id)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border shadow-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-slate-300 hover:text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600'}`} title="Copy Invite Link">
+                    <i className="fas fa-copy"></i>
+                  </button>
+                  <button onClick={() => setInvitationToDelete(invitation)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all border shadow-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-rose-500 hover:bg-rose-600 hover:text-white' : 'bg-white border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-600'}`} title="Delete Invitation">
+                    <i className="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
       {userToTrash && isAdmin && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setUserToTrash(null)}></div>
@@ -396,6 +470,28 @@ const TeamView: React.FC<TeamViewProps> = ({ users, currentUser, onAddUser, onUp
             <div className="flex space-x-4">
               <button onClick={() => setUserToTrash(null)} className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest transition-all ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Cancel</button>
               <button onClick={executeTrash} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all">Move to Trash</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Invitation Confirmation Modal */}
+      {invitationToDelete && isAdmin && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setInvitationToDelete(null)}></div>
+          <div className={`rounded-[2rem] shadow-2xl border w-full max-w-md p-8 relative z-10 animate-in zoom-in-95 duration-200 text-[12px] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center space-x-4 mb-6 text-rose-600">
+              <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-rose-100">
+                <i className="fas fa-trash-can"></i>
+              </div>
+              <h3 className={`text-xl font-black tracking-tight !text-base ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>Delete Invitation?</h3>
+            </div>
+            <p className={`mb-8 font-semibold leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+              Are you sure you want to delete the invitation for <span className={`${isDarkMode ? 'text-white' : 'text-slate-900'} font-black`}>{invitationToDelete.email}</span>? This action cannot be undone.
+            </p>
+            <div className="flex space-x-4">
+              <button onClick={() => setInvitationToDelete(null)} className={`flex-1 py-4 rounded-xl font-black uppercase tracking-widest transition-all ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Cancel</button>
+              <button onClick={handleDeleteInvitation} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-rose-200 hover:bg-rose-700 transition-all">Delete</button>
             </div>
           </div>
         </div>

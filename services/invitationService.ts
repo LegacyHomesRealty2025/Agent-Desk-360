@@ -108,6 +108,55 @@ class InvitationService {
     }
   }
 
+  async getPendingInvitations(brokerageId: string): Promise<BrokerageInvite[]> {
+    try {
+      const { data, error } = await supabase
+        .from('brokerage_invites')
+        .select('*')
+        .eq('brokerage_id', brokerageId)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending invitations:', error);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        brokerageId: item.brokerage_id,
+        email: item.email,
+        role: item.role as UserRole,
+        invitedBy: item.invited_by,
+        status: item.status,
+        expiresAt: item.expires_at,
+        createdAt: item.created_at
+      }));
+    } catch (error) {
+      console.error('Error in getPendingInvitations:', error);
+      return [];
+    }
+  }
+
+  async deleteInvitation(inviteId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('brokerage_invites')
+        .delete()
+        .eq('id', inviteId);
+
+      if (error) {
+        console.error('Error deleting invitation:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in deleteInvitation:', error);
+      return false;
+    }
+  }
+
   private async expireInvitation(inviteId: string): Promise<void> {
     try {
       await supabase
