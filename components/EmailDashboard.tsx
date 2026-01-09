@@ -67,9 +67,9 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
     setIsSending(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Not authenticated. Please log in again.');
       }
 
       const response = await fetch(
@@ -78,7 +78,6 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
