@@ -54,7 +54,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Missing required fields: subject, body, and recipients");
     }
 
-    const senderEmail = "Josephine Sharma <Josephine@LegacyHomesRE.com>";
+    const senderEmail = "Josephine Sharma <josephine@legacyhomesre.com>";
 
     const { data: emailData, error: emailError } = await supabase
       .from("emails")
