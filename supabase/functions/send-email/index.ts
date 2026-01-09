@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
     // const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     // for (const recipient of recipients) {
     //   await resend.emails.send({
-    //     from: senderEmail,
+    //     from: "Raj@LegacyHomesRE.com",
     //     to: recipient.email,
     //     subject: subject,
     //     html: body,
