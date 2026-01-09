@@ -45,8 +45,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      throw new Error("Unauthorized");
+      console.error("Auth error:", authError);
+      throw new Error("Unauthorized - invalid or expired token");
     }
+
+    console.log("Authenticated user:", user.email);
 
     const { subject, body, recipients, templateId }: SendEmailRequest = await req.json();
 
