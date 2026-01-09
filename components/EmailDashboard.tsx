@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { EmailMessage, User, EmailFolder, Lead } from '../types.ts';
 import BulkEmailComposer from './BulkEmailComposer.tsx';
 import EmailTemplatesManager from './EmailTemplatesManager.tsx';
+import { supabase } from '../lib/supabase.ts';
 
 interface EmailDashboardProps {
   emails: EmailMessage[];
@@ -33,6 +34,7 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
     subject: '',
     body: ''
   });
+  const [isSending, setIsSending] = useState(false);
 
   const filteredEmails = useMemo(() => {
     return emails
@@ -58,26 +60,65 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
     }
   };
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!composeData.to || !composeData.subject) return;
 
-    const newEmail: EmailMessage = {
-      id: `em_sent_${Date.now()}`,
-      sender: `${currentUser.firstName} ${currentUser.lastName}`,
-      senderEmail: currentUser.email,
-      recipientEmail: composeData.to,
-      subject: composeData.subject,
-      body: composeData.body,
-      timestamp: new Date().toISOString(),
-      isRead: true,
-      folder: 'SENT'
-    };
+    setIsSending(true);
 
-    onSendEmail(newEmail);
-    setIsComposeOpen(false);
-    setComposeData({ to: '', subject: '', body: '' });
-    alert('Email sent successfully!');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subject: composeData.subject,
+            body: composeData.body,
+            recipients: [{
+              email: composeData.to,
+              name: composeData.to.split('@')[0],
+            }],
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send email');
+      }
+
+      const newEmail: EmailMessage = {
+        id: `em_sent_${Date.now()}`,
+        sender: `${currentUser.firstName} ${currentUser.lastName}`,
+        senderEmail: currentUser.email,
+        recipientEmail: composeData.to,
+        subject: composeData.subject,
+        body: composeData.body,
+        timestamp: new Date().toISOString(),
+        isRead: true,
+        folder: 'SENT'
+      };
+
+      onSendEmail(newEmail);
+      setIsComposeOpen(false);
+      setComposeData({ to: '', subject: '', body: '' });
+      alert('Email sent successfully via Resend!');
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleToggleStar = (e: React.MouseEvent, id: string, currentState?: boolean) => {
@@ -318,10 +359,19 @@ const EmailDashboard: React.FC<EmailDashboardProps> = ({
                      <button type="button" className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><i className="fas fa-image"></i></button>
                   </div>
                   <div className="flex items-center space-x-4">
-                     <button type="button" onClick={() => setIsComposeOpen(false)} className="px-8 py-4 text-slate-500 font-black uppercase tracking-widest text-[10px] hover:text-slate-700 transition-colors">Discard</button>
-                     <button type="submit" className="px-12 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center space-x-3 active:scale-95">
-                       <i className="fas fa-paper-plane"></i>
-                       <span>Send Message</span>
+                     <button type="button" onClick={() => setIsComposeOpen(false)} className="px-8 py-4 text-slate-500 font-black uppercase tracking-widest text-[10px] hover:text-slate-700 transition-colors" disabled={isSending}>Discard</button>
+                     <button type="submit" disabled={isSending} className="px-12 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center space-x-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                       {isSending ? (
+                         <>
+                           <i className="fas fa-spinner fa-spin"></i>
+                           <span>Sending...</span>
+                         </>
+                       ) : (
+                         <>
+                           <i className="fas fa-paper-plane"></i>
+                           <span>Send Message</span>
+                         </>
+                       )}
                      </button>
                   </div>
                </div>
