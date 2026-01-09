@@ -59,6 +59,25 @@ Deno.serve(async (req: Request) => {
 
     const senderEmail = "Josephine Sharma <josephine@legacyhomesre.com>";
 
+    const emailSignature = `
+<br><br>
+<p>Thank you,</p>
+<p><strong>Josephine Sharma</strong><br>
+BROKER/REALTOR®<br>
+GRI, e-PRO, SFR, PSA<br>
+Legacy Homes Realty<br>
+DRE# 01507253<br>
+Direct: (951) 314-4204<br>
+Fax: (951)220-6733<br>
+E-mail: JSharmaREO@yahoo.com</p>
+
+<p><strong>BEWARE OF CYBER-FRAUD</strong> Before wiring any funds, call the intended recipient at a number you know is valid to confirm the instructions - and be very wary of any request to change wire instructions you already received. A Legacy Homes Realty personnel will neither provide nor confirm wire instructions.</p>
+
+<p><strong>DISCLAIMER:</strong> The information contained in this email may be CONFIDENTIAL and PRIVILEGED. It is intended for the individual or entity named above. If you are not the intended recipient, please be notified that any use, review, distribution, or copying of this email is strictly prohibited. If you have received this email by error, please delete it and notify the sender immediately. Thank you.</p>
+`;
+
+    const bodyWithSignature = body + emailSignature;
+
     const { data: emailData, error: emailError } = await supabase
       .from("emails")
       .insert({
@@ -110,7 +129,7 @@ Deno.serve(async (req: Request) => {
           from: senderEmail,
           to: recipient.email,
           subject: subject,
-          html: body,
+          html: bodyWithSignature,
         });
         console.log(`Email sent successfully to ${recipient.email}. Resend ID: ${result.data?.id}`);
         emailResults.push({ email: recipient.email, success: true, id: result.data?.id });
