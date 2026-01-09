@@ -21,6 +21,18 @@ interface BrokerageData {
 }
 
 export const authService = {
+  
+  async signUp(email: string, password: string, role: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { role }
+      }
+    });
+    if (error) throw error;
+    return data;
+  },
   async getCurrentUser(): Promise<User | null> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
