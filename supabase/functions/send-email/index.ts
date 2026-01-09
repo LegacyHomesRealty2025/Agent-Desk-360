@@ -75,7 +75,6 @@ GRI, e-PRO, SFR, PSA<br>
 Legacy Homes Realty<br>
 DRE# 01507253<br>
 Direct: (951) 314-4204<br>
-Fax: (951)220-6733<br>
 E-mail: JSharmaREO@yahoo.com</p>
 
 <p><strong>BEWARE OF CYBER-FRAUD</strong> Before wiring any funds, call the intended recipient at a number you know is valid to confirm the instructions - and be very wary of any request to change wire instructions you already received. A Legacy Homes Realty personnel will neither provide nor confirm wire instructions.</p>
