@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, UserRole, Lead, Brokerage, Task, LeadNote, Deal, OpenHouse, EmailMessage, TrashedMetadata, YearlyGoal, SharedFolder, SharedDocument } from './types.ts';
-import { MOCK_BROKER, MOCK_AGENTS, MOCK_BROKERAGE, MOCK_LEADS, MOCK_TASKS, MOCK_DEALS, MOCK_OPEN_HOUSES, MOCK_EMAILS, MOCK_GOALS, MOCK_SHARED_FOLDERS, MOCK_SHARED_DOCUMENTS } from './mockData.ts';
 import Layout from './components/Layout.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import LeadList from './components/LeadList.tsx';
@@ -21,13 +20,11 @@ import SignupView from './components/SignupView.tsx';
 import JoinView from './components/JoinView.tsx';
 import EmailDashboard from './components/EmailDashboard.tsx';
 import DocumentsView from './components/DocumentsView.tsx';
-import { leadIngestionService } from './services/leadIngestionService.ts';
 import { supabase } from './lib/supabase.ts';
 import { authService } from './services/authService.ts';
 import { invitationService, BrokerageInvite } from './services/invitationService.ts';
 import BrokerAdminPanel from './components/BrokerAdminPanel.tsx';
 
-const MOCKED_NOW = new Date('2026-01-06T09:00:00');
 const TZ = 'America/Los_Angeles';
 
 const INITIAL_NAV_ITEMS = [
@@ -58,7 +55,7 @@ const App: React.FC = () => {
   const [activeInvitation, setActiveInvitation] = useState<BrokerageInvite | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // Load live data from Supabase
+  // Load live data from the database
   const loadTeamData = async (bId: string) => {
     const { data } = await supabase.from('user_profiles').select('*').eq('brokerage_id', bId).eq('is_deleted', false);
     if (data) {
@@ -91,7 +88,7 @@ const App: React.FC = () => {
 
   const activeUsers = useMemo(() => users.filter(u => !u.isDeleted), [users]);
   
-  // Define notifications to prevent the 'hasEvents' undefined error
+  // FIXED: Added notifications object to stop 'hasEvents' crash
   const notifications = useMemo(() => ({
     items: [],
     hasTasks: false,
@@ -99,18 +96,10 @@ const App: React.FC = () => {
     totalCount: 0
   }), []);
 
-  const handleLogout = async () => {
-    await authService.signOut();
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setBrokerage(null);
-    setView('dashboard');
-  };
-
   const renderContent = () => {
     if (!currentUser || !brokerage) return null;
     
-    // Security: Stop Agents from accessing Broker views
+    // SECURITY: Blocks Agents from accessing restricted views
     if (currentUser.role === UserRole.AGENT && (view === 'team' || view === 'reports')) {
       return <Dashboard user={currentUser} agents={activeUsers} />;
     }
@@ -127,25 +116,15 @@ const App: React.FC = () => {
 
   if (activeInvitation) return <JoinView invitation={activeInvitation} onComplete={() => window.location.reload()} />;
 
-  // FIXED AUTH VIEW LOGIC (Fixes Line 128 Unexpected Token)
+  // FIXED: Logic for Login/Signup views (Fixed Line 128 syntax error)
   if (!isAuthenticated) {
     if (authView === 'signup') {
-      return (
-        <SignupView 
-          onSignupSuccess={() => setIsAuthenticated(true)} 
-          onNavigateToLogin={() => setAuthView('login')} 
-        />
-      );
+      return <SignupView onSignupSuccess={() => setIsAuthenticated(true)} onNavigateToLogin={() => setAuthView('login')} />;
     }
-    return (
-      <LoginView 
-        onLoginSuccess={() => setIsAuthenticated(true)} 
-        onNavigateToSignup={() => setAuthView('signup')} 
-      />
-    );
+    return <LoginView onLoginSuccess={() => setIsAuthenticated(true)} onNavigateToSignup={() => setAuthView('signup')} />;
   }
 
-  // Force profile completion if authenticated but data is missing
+  // FORCE: Redirect to JoinView if profile is missing
   if (!currentUser || !brokerage) return <JoinView onComplete={() => window.location.reload()} />;
 
   return (
@@ -155,9 +134,9 @@ const App: React.FC = () => {
       brokerage={brokerage}
       currentView={view} 
       setView={setView} 
-      onLogout={handleLogout}
+      onLogout={() => authService.signOut().then(() => setIsAuthenticated(false))}
       notifications={notifications}
-      // HIDE SWITCHER AND BROKER TABS FOR AGENTS
+      // SECURITY: Disables switching for Agents and filters sidebar
       onSwitchUser={currentUser.role === UserRole.BROKER ? (id: string) => console.log('Switch to', id) : undefined}
       navItems={INITIAL_NAV_ITEMS.filter(item => !item.roleRestriction || item.roleRestriction === currentUser.role)}
     >
